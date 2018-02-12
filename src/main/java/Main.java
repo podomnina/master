@@ -1,4 +1,5 @@
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.concurrent.Task;
 import javafx.event.EventHandler;
 import javafx.scene.Group;
@@ -9,17 +10,25 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import service.TrackingService;
+
+import java.io.IOException;
 
 import static org.apache.commons.lang3.StringUtils.isEmpty;
 
 public class Main extends Application {
 
-    public static void main(String[] args) { launch(args); }
+    private TrackingService trackingService = new TrackingService();
+
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
-    public void start(Stage stage) throws Exception {
+    public void start(Stage stage) {
 
 
         final Group group = new Group();
@@ -31,9 +40,14 @@ public class Main extends Application {
         final Button ok = new Button("ok");
         final VBox vBox = new VBox();
 
+        final Rectangle rectangle = new Rectangle(600,300);
+        rectangle.setFill(Color.WHITE);
+
         final Pane pane = new Pane();
         pane.setMinSize(600,300);
         pane.setMaxSize(600,300);
+
+        pane.getChildren().add(rectangle);
 
         vBox.getChildren().addAll(inputX, valueX, inputY, valueY, ok, pane);
         group.getChildren().add(vBox);
@@ -43,21 +57,48 @@ public class Main extends Application {
         stage.setScene(scene);
         stage.show();
 
-        final TrackingService trackingService = new TrackingService();
-
         ok.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
                 final String valX = valueX.getText();
                 final String valY = valueX.getText();
-
-                if (!isEmpty(valX) && !isEmpty(valY)) {
-                    Task <Void> task = new Task<Void>() {
-                        @Override public Void call()
-                                trackingService.justDoIt(Float.parseFloat(valX), Float.parseFloat(valY), pane);
-
+                try {
+                    trackingService.justDoIt(Float.parseFloat(valX), Float.parseFloat(valY), pane);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
+                //startTask(valX, valY, pane);
             }
         });
     }
+
+    public void startTask(final String valX, final String valY, final Pane pane) {
+        Runnable task = new Runnable() {
+            public void run() {
+                runTask(valX, valY, pane);
+            }
+        };
+        Thread backgroundThread = new Thread(task);
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
+    }
+
+    public void runTask(final String valX, final String valY, final Pane pane) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        trackingService.justDoIt(Float.parseFloat(valX), Float.parseFloat(valY), pane);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+    }
+
 }

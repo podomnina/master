@@ -8,6 +8,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import model.Pos;
 import model.Vehicle;
@@ -32,10 +33,10 @@ public class TrackingService {
         final Pos newTarget = new Pos(x,y);
         mainVehicle.getTargetList().push(newTarget);
 
-        moveVehicle(mainVehicle,1);
+        moveVehicle(mainVehicle,1, pane);
     }
 
-    private void moveVehicle(Vehicle vehicle, int step) throws InterruptedException {
+    private void moveVehicle(Vehicle vehicle, int step, Pane pane) throws InterruptedException {
         final Pos to = vehicle.getTargetList().pop();
         while (true) {
             final Pos from = vehicle.getCurrentPos();
@@ -44,9 +45,14 @@ public class TrackingService {
             final Pos nextPoint = new Pos((currentPoint.getX() + unitVector.getX() * step),
                     (currentPoint.getY() + unitVector.getY() * step));
             vehicle.setCurrentPos(nextPoint);
-
-            vehicle.getCircle().setTranslateX(vehicle.getCurrentPos().getX());
-            vehicle.getCircle().setTranslateY(vehicle.getCurrentPos().getY());
+            final javafx.scene.shape.Rectangle rectangle = new Rectangle(600,300);
+            rectangle.setFill(Color.WHITE);
+            Circle circle = new Circle(5, Color.RED);
+            pane.getChildren().addAll(circle, rectangle);
+            rectangle.toFront();
+            circle.toFront();
+            circle.setTranslateX(vehicle.getCurrentPos().getX());
+            circle.setTranslateY(vehicle.getCurrentPos().getY());
             createAndPlayTransition(vehicle.getCircle(), from, nextPoint);
             if (((nextPoint.getX() <= to.getX() + 0.5) && (nextPoint.getX() >= to.getX() - 0.5))
                     && ((nextPoint.getY() <= to.getY() + 0.5) && (nextPoint.getY() >= to.getY() - 0.5))) {
@@ -57,7 +63,7 @@ public class TrackingService {
                 System.out.println("Vehicle has reached the goal");
                 break;
             }
-            Thread.sleep(10);
+            Thread.sleep(1000);
         }
     }
 
