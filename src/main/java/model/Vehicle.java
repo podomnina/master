@@ -23,4 +23,9 @@ public class Vehicle {
             this.circle.setCenterX(this.currentPos.getX());
         }
     }
+
+    public void redrawCircle() {
+        circle.setCenterX(currentPos.getX());
+        circle.setCenterY(currentPos.getY());
+    }
 }

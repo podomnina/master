@@ -24,12 +24,18 @@ import java.util.Stack;
 
 public class TrackingService {
 
-    private final Logger logger = LoggerFactory.getLogger(TrackingService.class);
+    public Vehicle createVehicle(Long id, Pos initialPos, Color color, Pane pane) {
+        final Vehicle vehicle = new Vehicle(id, initialPos, new Stack<Pos>(), new Circle(5, color));
+        vehicle.getCircle().setCenterX(initialPos.getX());
+        vehicle.getCircle().setCenterY(initialPos.getY());
+        pane.getChildren().add(vehicle.getCircle());
+        System.out.println("Created new vehicle with id: " + id);
+        return vehicle;
+    }
 
     public void justDoIt(float x, float y, Pane pane) throws IOException, InterruptedException {
         final Vehicle mainVehicle = new Vehicle(1L, new Pos(10,10), new Stack<Pos>(), new Circle(5, Color.RED));
         pane.getChildren().add(mainVehicle.getCircle());
-        logger.debug("Created vehicle number '{}' with position '{}'", mainVehicle.getId(), mainVehicle.getCurrentPos());
         final Pos newTarget = new Pos(x,y);
         mainVehicle.getTargetList().push(newTarget);
 
@@ -53,13 +59,11 @@ public class TrackingService {
             circle.toFront();
             circle.setTranslateX(vehicle.getCurrentPos().getX());
             circle.setTranslateY(vehicle.getCurrentPos().getY());
-            createAndPlayTransition(vehicle.getCircle(), from, nextPoint);
             if (((nextPoint.getX() <= to.getX() + 0.5) && (nextPoint.getX() >= to.getX() - 0.5))
                     && ((nextPoint.getY() <= to.getY() + 0.5) && (nextPoint.getY() >= to.getY() - 0.5))) {
                 vehicle.setCurrentPos(to);
                 vehicle.getCircle().setCenterX(vehicle.getCurrentPos().getX());
                 vehicle.getCircle().setCenterY(vehicle.getCurrentPos().getY());
-                //TODO ADD CREATEANDPLATTRANSITION
                 System.out.println("Vehicle has reached the goal");
                 break;
             }
@@ -77,12 +81,4 @@ public class TrackingService {
         return pos;
     }
 
-    private void createAndPlayTransition(Circle circle, Pos from, Pos to) {
-        TranslateTransition translateTransition = new TranslateTransition(Duration.seconds(1),circle);
-        translateTransition.setFromX(from.getX());
-        translateTransition.setFromY(from.getY());
-        translateTransition.setToX(to.getX());
-        translateTransition.setToY(to.getY());
-        translateTransition.play();
-    }
 }
