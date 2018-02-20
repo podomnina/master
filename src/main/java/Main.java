@@ -10,12 +10,13 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import model.Pos;
 import model.Vehicle;
-import service.TrackingService;
 
 import java.io.IOException;
+import java.util.Stack;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +26,6 @@ import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 public class Main extends Application {
 
-    private TrackingService trackingService = new TrackingService();
     private Pane pane = new Pane();
     private TextField valueX = new TextField();
     private TextField valueY = new TextField();
@@ -39,8 +39,8 @@ public class Main extends Application {
     public void start(Stage stage) {
         initGUI(stage);
 
-        final Vehicle mainVehicle = trackingService.createVehicle(0L, new Pos(10,10), Color.RED, pane);
-        final Vehicle vehicle1 = trackingService.createVehicle(1L, new Pos(10,50), Color.BLUE, pane);
+        final Vehicle mainVehicle = createVehicle(0L, new Pos(10,10), Color.RED, pane);
+        final Vehicle vehicle1 = createVehicle(1L, new Pos(10,50), Color.BLUE, pane);
 
         ok.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
@@ -69,17 +69,11 @@ public class Main extends Application {
             }
         }, 0, 5, TimeUnit.SECONDS);
 
-
-
-
-
-
-
         ScheduledExecutorService service1 = Executors.newSingleThreadScheduledExecutor();
         service1.scheduleAtFixedRate(new Runnable() {
             @Override
             public void run() {
-                System.out.println("New scheduled iteration. Vehicle1: " + vehicle1.getTargetList().size());
+                System.out.println("New scheduled iteration. Vehicle1: " + vehicle1.getTargetList());
                 if (!isEmpty(vehicle1.getTargetList())) {
                     System.out.println("Move vehicle 1 to new target");
                     try {
@@ -89,7 +83,7 @@ public class Main extends Application {
                     }
                 }
             }
-        }, 0, 5, TimeUnit.SECONDS);
+        }, 0, 10, TimeUnit.MILLISECONDS);
 
     }
 
@@ -117,6 +111,15 @@ public class Main extends Application {
                 nextVehicle.getTargetList().push(vehicle.getCurrentPos());
             }
         }
+    }
+
+    public Vehicle createVehicle(Long id, Pos initialPos, Color color, Pane pane) {
+        final Vehicle vehicle = new Vehicle(id, initialPos, new Stack<Pos>(), new Circle(5, color));
+        vehicle.getCircle().setCenterX(initialPos.getX());
+        vehicle.getCircle().setCenterY(initialPos.getY());
+        pane.getChildren().add(vehicle.getCircle());
+        System.out.println("Created new vehicle with id: " + id);
+        return vehicle;
     }
 
     private void initGUI(Stage stage) {
