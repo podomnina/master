@@ -4,19 +4,22 @@ import javafx.scene.shape.Circle;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.Random;
 import java.util.Stack;
 
 @Data
 public class Vehicle {
     private Long id;
     private Pos currentPos;
-    private Stack<Pos> targetList = new Stack<Pos>();
+    private Queue<Pos> targetList;
     private Circle circle;
 
-    public Vehicle(Long id, Pos currentPos, Stack<Pos> targetList, Circle circle) {
+    public Vehicle(Long id, Pos currentPos, Queue<Pos> targetList, Circle circle) {
         this.id = id;
         this.currentPos = currentPos;
-        this.targetList = targetList != null ? targetList : new Stack<Pos>();
+        this.targetList = targetList != null ? targetList : new LinkedList<>();
         this.circle = circle;
         if (this.circle != null && this.currentPos != null) {
             this.circle.setCenterX(this.currentPos.getX());
@@ -27,5 +30,13 @@ public class Vehicle {
     public void redrawCircle() {
         circle.setCenterX(currentPos.getX());
         circle.setCenterY(currentPos.getY());
+    }
+
+    public Pos getCurrentPosWithMeasurementError() {
+        if (currentPos != null) {
+            float res = (float) (Math.random()*10 - 5);
+            return new Pos(currentPos.getX() + res, currentPos.getY() + res);
+        }
+        return currentPos;
     }
 }
