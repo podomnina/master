@@ -15,6 +15,7 @@ public class Vehicle {
     private Pos currentPos;
     private Queue<Pos> targetList;
     private Circle circle;
+    private Queue<Pos> approximateTargetList;
 
     public Vehicle(Long id, Pos currentPos, Queue<Pos> targetList, Circle circle) {
         this.id = id;
@@ -25,6 +26,7 @@ public class Vehicle {
             this.circle.setCenterX(this.currentPos.getX());
             this.circle.setCenterX(this.currentPos.getX());
         }
+        this.approximateTargetList = new LinkedList<>();
     }
 
     public void redrawCircle() {
@@ -34,7 +36,7 @@ public class Vehicle {
 
     public Pos getCurrentPosWithMeasurementError() {
         if (currentPos != null) {
-            float res = (float) (Math.random()*10 - 5);
+            float res = (float) (Math.random()*40 - 20);
             return new Pos(currentPos.getX() + res, currentPos.getY() + res);
         }
         return currentPos;

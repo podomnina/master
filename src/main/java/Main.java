@@ -15,11 +15,12 @@ import javafx.stage.Stage;
 import model.Pos;
 import model.Vehicle;
 
-import java.util.LinkedList;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import static com.google.common.collect.Lists.newArrayList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 
@@ -76,7 +77,7 @@ public class Main extends Application {
                 if (!isEmpty(mainVehicle.getTargetList())) {
                     System.out.println("Move main vehicle to new target");
                     try {
-                        moveVehicle(mainVehicle, 1);
+                        moveVehicle(mainVehicle, 1, mainVehicle.getTargetList());
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
@@ -94,7 +95,8 @@ public class Main extends Application {
                 if (!isEmpty(vehicle1.getTargetList())) {
                     System.out.println("Move vehicle 1 to new target");
                     try {
-                        moveVehicle(vehicle1, 1);
+                        approximateWay(vehicle1, 30, 0.5f);
+                        moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
@@ -112,7 +114,7 @@ public class Main extends Application {
                 if (!isEmpty(vehicle2.getTargetList())) {
                     System.out.println("Move vehicle 2 to new target");
                     try {
-                        moveVehicle(vehicle2, 1);
+                        moveVehicle(vehicle2, 1, vehicle2.getTargetList());
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
@@ -137,8 +139,9 @@ public class Main extends Application {
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
     }
 
-    private void moveVehicle(Vehicle vehicle, int step) throws InterruptedException {
-        final Pos to = vehicle.getTargetList().remove();
+    private void moveVehicle(Vehicle vehicle, int step, Queue<Pos> externalTargetList) throws InterruptedException {
+        Queue<Pos> targetList = externalTargetList != null ? externalTargetList : vehicle.getTargetList();
+        final Pos to = targetList.remove();
         while (true) {
             final Pos from = vehicle.getCurrentPos();
             final Pos unitVector = getUnitVector(from, to);
@@ -156,6 +159,7 @@ public class Main extends Application {
 
             Platform.runLater(() -> {
                 vehicle.redrawCircle();
+                pane.getChildren().add(new Circle(vehicle.getCurrentPos().getX(), vehicle.getCurrentPos().getY(), 1, vehicle.getCircle().getFill()));
             });
         }
     }
@@ -203,4 +207,147 @@ public class Main extends Application {
         return pos;
     }
 
+    private void approximateWay(Vehicle vehicle, int part, float E) {
+        if (!isEmpty(vehicle.getTargetList())) {
+            final Queue<Pos> approximateWay = new LinkedList<>();
+            final List<Pos> hugeCloud = newArrayList(vehicle.getTargetList());
+            if (part>hugeCloud.size()) {
+                part = hugeCloud.size();
+            }
+            List<Pos> cloud = hugeCloud.subList(0, part);
+            float angle = getLineProperties(cloud);
+            float a = (float) Math.tan(angle);
+            Pos centralPoint = getCentralPointInCloud(cloud);
+            float b = centralPoint.getY() - a*centralPoint.getX();
+            approximateWay.add(centralPoint);
+
+            int upperBound = part;
+            int bottomBound = 2*part;
+            int stopAlgorithm = (int) Math.ceil(hugeCloud.size()/part);
+            for (int q = 1; q<stopAlgorithm;q++) {
+                cloud = hugeCloud.subList(upperBound, bottomBound);
+                angle = getLineProperties(cloud);
+                float a1 = (float) Math.tan(angle);
+                centralPoint = getCentralPointInCloud(cloud);
+                float b1 = centralPoint.getY() - a1*centralPoint.getX();
+                float currentE = checkRejection(a1,b1,cloud);
+                if (currentE > E) {
+                    Pos intersectionPoint = getIntersectionPoint(a1,b1,a,b);
+                    if (checkOutOfArea(cloud, intersectionPoint)) {
+                        a = a1;
+                        b = b1;
+                        approximateWay.add(intersectionPoint);
+                    } else {
+                        approximateWay.add(centralPoint);
+                    }
+                } else {
+                    approximateWay.add(centralPoint);
+                }
+                upperBound = upperBound + part;
+                bottomBound = bottomBound + part;
+            }
+
+            vehicle.setApproximateTargetList(approximateWay);
+        }
+    }
+
+    private float getLineProperties(List<Pos> cloud) {
+        float angle = 0;
+        final Pos centralPoint = getCentralPointInCloud(cloud);
+        if (centralPoint != null) {
+            angle = getAngle(centralPoint, cloud);
+            float f1 = getValueOfObjectiveFunction(angle, centralPoint, cloud);
+            float f2 = getValueOfObjectiveFunction((float) (angle+Math.PI/2), centralPoint, cloud);
+            if (f2<f1) {
+                angle = (float) (angle + Math.PI/2);
+            }
+        }
+        return angle;
+    }
+
+    private Pos getCentralPointInCloud(List<Pos> cloud) {
+        if (!isEmpty(cloud)) {
+            float sumX = 0;
+            float sumY = 0;
+            int n = cloud.size();
+            for (int i = 0; i < n; i++) {
+                final Pos pos = cloud.get(i);
+                sumX = sumX + pos.getX();
+                sumY = sumY + pos.getY();
+            }
+            return new Pos(sumX/n, sumY/n);
+        }
+        return null;
+    }
+
+    private float getAngle(Pos centralPoint, List<Pos> cloud) {
+        if (!isEmpty(cloud) && centralPoint != null) {
+            int n = cloud.size();
+            float sumXY = 0;
+            float sumXY2 = 0;
+            for (int i = 0; i< n; i++) {
+                Pos point = cloud.get(i);
+                float divX = centralPoint.getX() - point.getX();
+                float divY = centralPoint.getY() - point.getY();
+                sumXY = sumXY + divX*divY;
+                sumXY2 = sumXY2 + (divX*divX - divY*divY);
+            }
+            return (float) (Math.atan(2*sumXY/sumXY2)/2);
+        }
+
+        return 0;
+    }
+
+    private float getValueOfObjectiveFunction(float angle, Pos centralPoint, List<Pos> cloud) {
+        float f = 0;
+        int n = cloud.size();
+        for (int i = 0; i<n ; i++) {
+            Pos point = cloud.get(i);
+            float divX = centralPoint.getX() - point.getX();
+            float divY = centralPoint.getY() - point.getY();
+            f = (float) (f + Math.pow(Math.cos(angle)*divY - Math.sin(angle)*divX,2));
+        }
+        return f;
+    }
+
+    private float checkRejection(float a, float b, List<Pos> cloud) {
+        float E = 0;
+        if (!isEmpty(cloud)) {
+            for (int i = 0; i < cloud.size(); i++) {
+                Pos point = cloud.get(i);
+                float f = a*point.getX() + b;
+                E = (float) (E + Math.pow(f-point.getY(), 2));
+            }
+            E = E / cloud.size();
+        }
+        return E;
+    }
+
+    private Pos getIntersectionPoint(float a1, float b1, float a2, float b2) {
+        if (a1!=a2 && b1!=b2) {
+            float x = (b2-b1)/(a1-a2);
+            float y = a1*x + b1;
+            return new Pos(x,y);
+        }
+        return null;
+    }
+
+    private boolean checkOutOfArea(List<Pos> cloud, Pos intersectionPoint) {
+        final Comparator<Pos> compX = (p1, p2) -> Float.compare( p1.getX(), p2.getX());
+        final Comparator<Pos> compY = (p1, p2) -> Float.compare( p1.getY(), p2.getY());
+        float maxBordersX = cloud.stream().max(compX).get().getX();
+        float maxBordersY = cloud.stream().max(compY).get().getY();
+        float minBordersX = cloud.stream().min(compX).get().getX();
+        float minBordersY = cloud.stream().min(compY).get().getY();
+        if (intersectionPoint.getX()<maxBordersX
+                && intersectionPoint.getX()>minBordersX
+                && intersectionPoint.getY()<maxBordersY
+                && intersectionPoint.getY()>minBordersY) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 }
+
+//TODO сделать оси, чтобы понятен был масштаб
