@@ -34,10 +34,15 @@ public class Main extends Application {
     private Vehicle mainVehicle;
     private Vehicle vehicle1;
     private Vehicle vehicle2;
+    private Vehicle vehicle3;
 
     private static final long MAIN_VEHICLE_FREQUENCY = 5000;
     private static final long VEHICLE1_FREQUENCY = 100;
     private static final long GET_COORDINATES_FREQUENCY = 1000;
+
+    public static final float GPS_MEASUREMENT_ERROR = 20;
+    public static final int NUMBER_OF_POINTS = 20;
+    public static final float ALGORITHM_MEASUREMENT_ERROR = 0.01f;
 
     public static void main(String[] args) {
         launch(args);
@@ -47,9 +52,10 @@ public class Main extends Application {
     public void start(Stage stage) {
         initGUI(stage);
 
-        mainVehicle = createVehicle(0L, new Pos(10,10), Color.RED, pane);
-        vehicle1 = createVehicle(1L, new Pos(10,50), Color.BLUE, pane);
-        vehicle2 = createVehicle(2L, new Pos(10,100), Color.GREEN, pane);
+        mainVehicle = createVehicle(0L, new Pos(100, 50), Color.RED, pane);
+        vehicle1 = createVehicle(1L, new Pos(100, 100), Color.BLUE, pane);
+        vehicle2 = createVehicle(2L, new Pos(100, 150), Color.GREEN, pane);
+        vehicle3 = createVehicle(2L, new Pos(100, 200), Color.BLACK, pane);
 
         ok.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
@@ -62,10 +68,18 @@ public class Main extends Application {
             }
         });
 
+        Queue queue = new LinkedList();
+        queue.add(new Pos(1000, 100));
+        queue.add(new Pos(100, 600));
+        queue.add(new Pos(1000, 600));
+        queue.add(new Pos(500, 300));
+        mainVehicle.setTargetList(queue);
+
         runMainVehicleExecutor();
         getCoordinatesExecutor();
         runVehicle1Executor();
         runVehicle2Executor();
+        runVehicle3Executor();
     }
 
     private void runMainVehicleExecutor() {
@@ -95,8 +109,9 @@ public class Main extends Application {
                 if (!isEmpty(vehicle1.getTargetList())) {
                     System.out.println("Move vehicle 1 to new target");
                     try {
-                        approximateWay(vehicle1, 30, 0.5f);
+                        approximateWay(vehicle1, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
                         moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
+                        // moveVehicle(vehicle1, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
@@ -114,7 +129,29 @@ public class Main extends Application {
                 if (!isEmpty(vehicle2.getTargetList())) {
                     System.out.println("Move vehicle 2 to new target");
                     try {
-                        moveVehicle(vehicle2, 1, vehicle2.getTargetList());
+                        approximateWay(vehicle2, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle2, 1, vehicle2.getApproximateTargetList());
+                        //moveVehicle(vehicle2, 1, null);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
+    }
+
+    private void runVehicle3Executor() {
+        ScheduledExecutorService vehicle3Executor = Executors.newSingleThreadScheduledExecutor();
+        vehicle3Executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("New scheduled iteration. Vehicle3: " + vehicle3.getTargetList());
+                if (!isEmpty(vehicle3.getTargetList())) {
+                    System.out.println("Move vehicle 3 to new target");
+                    try {
+                        approximateWay(vehicle3, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle3, 1, vehicle3.getApproximateTargetList());
+                        //moveVehicle(vehicle3, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
@@ -129,18 +166,28 @@ public class Main extends Application {
             @Override
             public void run() {
                 System.out.println("Get coordinates of main vehicle");
-                if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
+                if (isEmpty(vehicle1.getTargetList()) || notRepeatedPos(mainVehicle.getCurrentPos(), vehicle1.getTargetList().element(), 10)) {
                     vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError());
                 }
-                if (isEmpty(vehicle2.getTargetList()) || !vehicle1.getCurrentPos().equals(vehicle2.getTargetList().element())) {
+                if (isEmpty(vehicle2.getTargetList()) || notRepeatedPos(vehicle1.getCurrentPos(), vehicle2.getTargetList().element(), 10)) {
                     vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError());
+                }
+                if (isEmpty(vehicle3.getTargetList()) || notRepeatedPos(vehicle2.getCurrentPos(), vehicle3.getTargetList().element(), 10)) {
+                    vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError());
                 }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
     }
 
+    private boolean notRepeatedPos(Pos currentPos, Pos lastElement, float area) {
+        return ((Math.abs(currentPos.getX() - lastElement.getX()) > area) && (Math.abs(currentPos.getY() - lastElement.getY()) > area));
+    }
+
     private void moveVehicle(Vehicle vehicle, int step, Queue<Pos> externalTargetList) throws InterruptedException {
         Queue<Pos> targetList = externalTargetList != null ? externalTargetList : vehicle.getTargetList();
+        if (isEmpty(targetList)) {
+            return;
+        }
         final Pos to = targetList.remove();
         while (true) {
             final Pos from = vehicle.getCurrentPos();
@@ -160,6 +207,8 @@ public class Main extends Application {
             Platform.runLater(() -> {
                 vehicle.redrawCircle();
                 pane.getChildren().add(new Circle(vehicle.getCurrentPos().getX(), vehicle.getCurrentPos().getY(), 1, vehicle.getCircle().getFill()));
+                vehicle1.getTargetList().forEach(a -> pane.getChildren().add(new Circle(a.getX(), a.getY(), 3, Color.MAGENTA)));
+                vehicle1.getApproximateTargetList().forEach(a -> pane.getChildren().add(new Circle(a.getX(), a.getY(), 2, Color.CYAN)));
             });
         }
     }
@@ -180,13 +229,13 @@ public class Main extends Application {
         final Label inputY = new Label("Input target y:");
         final VBox vBox = new VBox();
 
-        pane.setMinSize(600,300);
-        pane.setMaxSize(600,300);
+        pane.setMinSize(1800, 1000);
+        pane.setMaxSize(1800, 1000);
 
         vBox.getChildren().addAll(inputX, valueX, inputY, valueY, ok, pane);
         group.getChildren().add(vBox);
 
-        final Scene scene = new Scene(group, 600, 400);
+        final Scene scene = new Scene(group, 1800, 1000);
 
         stage.setScene(scene);
         stage.show();
@@ -196,13 +245,13 @@ public class Main extends Application {
         final Pos pos = new Pos();
         pos.setX(to.getX() - from.getX());
         pos.setY(to.getY() - from.getY());
-        final float length = (float) Math.sqrt(pos.getX()*pos.getX() + pos.getY()*pos.getY());
+        final float length = (float) Math.sqrt(pos.getX() * pos.getX() + pos.getY() * pos.getY());
         if (length > 0.05) {
             pos.setX(pos.getX() / length);
             pos.setY(pos.getY() / length);
         } else {
-            System.out.println("Error! Length is zero!");
-            return new Pos(0,0);
+            System.out.println("Error! Length is zero! From:" + from + " To:" + to);
+            return new Pos(0, 0);
         }
         return pos;
     }
@@ -211,28 +260,31 @@ public class Main extends Application {
         if (!isEmpty(vehicle.getTargetList())) {
             final Queue<Pos> approximateWay = new LinkedList<>();
             final List<Pos> hugeCloud = newArrayList(vehicle.getTargetList());
-            if (part>hugeCloud.size()) {
+            if (part > hugeCloud.size()) {
                 part = hugeCloud.size();
             }
             List<Pos> cloud = hugeCloud.subList(0, part);
+            if (isMainVehicleStopped(cloud, GPS_MEASUREMENT_ERROR*2)) {
+                return;
+            }
             float angle = getLineProperties(cloud);
             float a = (float) Math.tan(angle);
             Pos centralPoint = getCentralPointInCloud(cloud);
-            float b = centralPoint.getY() - a*centralPoint.getX();
+            float b = centralPoint.getY() - a * centralPoint.getX();
             approximateWay.add(centralPoint);
 
             int upperBound = part;
-            int bottomBound = 2*part;
-            int stopAlgorithm = (int) Math.ceil(hugeCloud.size()/part);
-            for (int q = 1; q<stopAlgorithm;q++) {
+            int bottomBound = 2 * part;
+            int stopAlgorithm = (int) Math.ceil(hugeCloud.size() / part);
+            for (int q = 1; q < stopAlgorithm; q++) {
                 cloud = hugeCloud.subList(upperBound, bottomBound);
                 angle = getLineProperties(cloud);
                 float a1 = (float) Math.tan(angle);
                 centralPoint = getCentralPointInCloud(cloud);
-                float b1 = centralPoint.getY() - a1*centralPoint.getX();
-                float currentE = checkRejection(a1,b1,cloud);
+                float b1 = centralPoint.getY() - a1 * centralPoint.getX();
+                float currentE = checkRejection(a1, b1, cloud);
                 if (currentE > E) {
-                    Pos intersectionPoint = getIntersectionPoint(a1,b1,a,b);
+                    Pos intersectionPoint = getIntersectionPoint(a1, b1, a, b);
                     if (checkOutOfArea(cloud, intersectionPoint)) {
                         a = a1;
                         b = b1;
@@ -248,6 +300,7 @@ public class Main extends Application {
             }
 
             vehicle.setApproximateTargetList(approximateWay);
+            vehicle.getTargetList().clear();
         }
     }
 
@@ -257,9 +310,9 @@ public class Main extends Application {
         if (centralPoint != null) {
             angle = getAngle(centralPoint, cloud);
             float f1 = getValueOfObjectiveFunction(angle, centralPoint, cloud);
-            float f2 = getValueOfObjectiveFunction((float) (angle+Math.PI/2), centralPoint, cloud);
-            if (f2<f1) {
-                angle = (float) (angle + Math.PI/2);
+            float f2 = getValueOfObjectiveFunction((float) (angle + Math.PI / 2), centralPoint, cloud);
+            if (f2 < f1) {
+                angle = (float) (angle + Math.PI / 2);
             }
         }
         return angle;
@@ -275,7 +328,7 @@ public class Main extends Application {
                 sumX = sumX + pos.getX();
                 sumY = sumY + pos.getY();
             }
-            return new Pos(sumX/n, sumY/n);
+            return new Pos(sumX / n, sumY / n);
         }
         return null;
     }
@@ -285,14 +338,14 @@ public class Main extends Application {
             int n = cloud.size();
             float sumXY = 0;
             float sumXY2 = 0;
-            for (int i = 0; i< n; i++) {
+            for (int i = 0; i < n; i++) {
                 Pos point = cloud.get(i);
                 float divX = centralPoint.getX() - point.getX();
                 float divY = centralPoint.getY() - point.getY();
-                sumXY = sumXY + divX*divY;
-                sumXY2 = sumXY2 + (divX*divX - divY*divY);
+                sumXY = sumXY + divX * divY;
+                sumXY2 = sumXY2 + (divX * divX - divY * divY);
             }
-            return (float) (Math.atan(2*sumXY/sumXY2)/2);
+            return (float) (Math.atan(2 * sumXY / sumXY2) / 2);
         }
 
         return 0;
@@ -301,11 +354,11 @@ public class Main extends Application {
     private float getValueOfObjectiveFunction(float angle, Pos centralPoint, List<Pos> cloud) {
         float f = 0;
         int n = cloud.size();
-        for (int i = 0; i<n ; i++) {
+        for (int i = 0; i < n; i++) {
             Pos point = cloud.get(i);
             float divX = centralPoint.getX() - point.getX();
             float divY = centralPoint.getY() - point.getY();
-            f = (float) (f + Math.pow(Math.cos(angle)*divY - Math.sin(angle)*divX,2));
+            f = (float) (f + Math.pow(Math.cos(angle) * divY - Math.sin(angle) * divX, 2));
         }
         return f;
     }
@@ -315,8 +368,8 @@ public class Main extends Application {
         if (!isEmpty(cloud)) {
             for (int i = 0; i < cloud.size(); i++) {
                 Pos point = cloud.get(i);
-                float f = a*point.getX() + b;
-                E = (float) (E + Math.pow(f-point.getY(), 2));
+                float f = a * point.getX() + b;
+                E = (float) (E + Math.pow(f - point.getY(), 2));
             }
             E = E / cloud.size();
         }
@@ -324,29 +377,45 @@ public class Main extends Application {
     }
 
     private Pos getIntersectionPoint(float a1, float b1, float a2, float b2) {
-        if (a1!=a2 && b1!=b2) {
-            float x = (b2-b1)/(a1-a2);
-            float y = a1*x + b1;
-            return new Pos(x,y);
+        if (a1 != a2 && b1 != b2) {
+            float x = (b2 - b1) / (a1 - a2);
+            float y = a1 * x + b1;
+            return new Pos(x, y);
         }
         return null;
     }
 
     private boolean checkOutOfArea(List<Pos> cloud, Pos intersectionPoint) {
-        final Comparator<Pos> compX = (p1, p2) -> Float.compare( p1.getX(), p2.getX());
-        final Comparator<Pos> compY = (p1, p2) -> Float.compare( p1.getY(), p2.getY());
+        final Comparator<Pos> compX = (p1, p2) -> Float.compare(p1.getX(), p2.getX());
+        final Comparator<Pos> compY = (p1, p2) -> Float.compare(p1.getY(), p2.getY());
         float maxBordersX = cloud.stream().max(compX).get().getX();
         float maxBordersY = cloud.stream().max(compY).get().getY();
         float minBordersX = cloud.stream().min(compX).get().getX();
         float minBordersY = cloud.stream().min(compY).get().getY();
-        if (intersectionPoint.getX()<maxBordersX
-                && intersectionPoint.getX()>minBordersX
-                && intersectionPoint.getY()<maxBordersY
-                && intersectionPoint.getY()>minBordersY) {
+        if (intersectionPoint.getX() < maxBordersX
+                && intersectionPoint.getX() > minBordersX
+                && intersectionPoint.getY() < maxBordersY
+                && intersectionPoint.getY() > minBordersY) {
             return true;
         } else {
             return false;
         }
+    }
+
+    private boolean isMainVehicleStopped(List<Pos> cloud, float measurementError) {
+        if (!isEmpty(cloud) && cloud.size() >1) {
+            final Comparator<Pos> compX = (p1, p2) -> Float.compare(p1.getX(), p2.getX());
+            final Comparator<Pos> compY = (p1, p2) -> Float.compare(p1.getY(), p2.getY());
+            float maxBordersX = cloud.stream().max(compX).get().getX();
+            float maxBordersY = cloud.stream().max(compY).get().getY();
+            float minBordersX = cloud.stream().min(compX).get().getX();
+            float minBordersY = cloud.stream().min(compY).get().getY();
+
+            float delX = maxBordersX - minBordersX;
+            float delY = maxBordersY - minBordersY;
+            return delX < measurementError && delY < measurementError;
+        }
+        return false;
     }
 }
 
