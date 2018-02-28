@@ -1,3 +1,4 @@
+package working_variants;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
@@ -32,7 +33,7 @@ import static com.google.common.collect.Lists.newArrayList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 
-public class Main extends Application {
+public class improvement extends Application {
 
     private Pane pane = new Pane();
     private TextField valueX = new TextField();

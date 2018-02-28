@@ -4,10 +4,7 @@ import javafx.scene.shape.Circle;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Random;
-import java.util.Stack;
+import java.util.*;
 
 @Data
 public class Vehicle {
@@ -16,6 +13,11 @@ public class Vehicle {
     private Queue<Pos> targetList;
     private Circle circle;
     private Queue<Pos> approximateTargetList;
+    private Queue<Pos> etalonTargetList;
+
+    private List<Pos> approximateList = new ArrayList<>();
+    private List<Pos> list = new ArrayList<>();
+
 
     public static final float GPS_MEASUREMENT_ERROR = 20;
 
@@ -26,7 +28,7 @@ public class Vehicle {
         this.circle = circle;
         if (this.circle != null && this.currentPos != null) {
             this.circle.setCenterX(this.currentPos.getX());
-            this.circle.setCenterX(this.currentPos.getX());
+            this.circle.setCenterY(this.currentPos.getY());
         }
         this.approximateTargetList = new LinkedList<>();
     }

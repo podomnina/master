@@ -1,3 +1,4 @@
+package working_variants;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
@@ -14,15 +15,7 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import model.Pos;
 import model.Vehicle;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -32,18 +25,21 @@ import static com.google.common.collect.Lists.newArrayList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 
-public class Main extends Application {
+public class eight_vehicles extends Application {
 
     private Pane pane = new Pane();
     private TextField valueX = new TextField();
     private TextField valueY = new TextField();
     private Button ok = new Button("ok");
-    private Button excel = new Button("Write results to excel");
 
     private Vehicle mainVehicle;
     private Vehicle vehicle1;
     private Vehicle vehicle2;
     private Vehicle vehicle3;
+    private Vehicle vehicle4;
+    private Vehicle vehicle5;
+    private Vehicle vehicle6;
+    private Vehicle vehicle7;
 
     private static final long MAIN_VEHICLE_FREQUENCY = 5000;
     private static final long VEHICLE1_FREQUENCY = 100;
@@ -52,8 +48,6 @@ public class Main extends Application {
     public static final float GPS_MEASUREMENT_ERROR = 20;
     public static final int NUMBER_OF_POINTS = 20;
     public static final float ALGORITHM_MEASUREMENT_ERROR = 0.01f;
-
-    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
 
     public static void main(String[] args) {
         launch(args);
@@ -64,9 +58,13 @@ public class Main extends Application {
         initGUI(stage);
 
         mainVehicle = createVehicle(0L, new Pos(100, 50), Color.RED, pane);
-        vehicle1 = createVehicle(1L, new Pos(100, 100), Color.BLUE, pane);
-        vehicle2 = createVehicle(2L, new Pos(100, 150), Color.GREEN, pane);
-        vehicle3 = createVehicle(2L, new Pos(100, 200), Color.BLACK, pane);
+        vehicle1 = createVehicle(1L, new Pos(100, 100), Color.ORANGE, pane);
+        vehicle2 = createVehicle(2L, new Pos(100, 150), Color.YELLOW, pane);
+        vehicle3 = createVehicle(3L, new Pos(100, 200), Color.GREEN, pane);
+        vehicle4 = createVehicle(4L, new Pos(100, 250), Color.AQUAMARINE, pane);
+        vehicle5 = createVehicle(5L, new Pos(100, 300), Color.BLUE, pane);
+        vehicle6 = createVehicle(6L, new Pos(100, 350), Color.VIOLET, pane);
+        vehicle7 = createVehicle(7L, new Pos(100, 400), Color.BLACK, pane);
 
         ok.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
@@ -84,29 +82,20 @@ public class Main extends Application {
         queue.add(new Pos(100, 600));
         queue.add(new Pos(1000, 600));
         queue.add(new Pos(500, 300));
-
         mainVehicle.setTargetList(queue);
-        mainVehicle.setList(newArrayList(queue));
 
-        ScheduledExecutorService mainVehicleExecutor = runMainVehicleExecutor();
-        ScheduledExecutorService getCoordinatesExecutor = getCoordinatesExecutor();
-        ScheduledExecutorService runVehicle1 = runVehicle1Executor();
-        ScheduledExecutorService runVehicle2 = runVehicle2Executor();
-        ScheduledExecutorService runVehicle3 = runVehicle3Executor();
-        excel.setOnMousePressed(new EventHandler<MouseEvent>() {
-            @Override
-            public void handle(MouseEvent event) {
-                shutDownAllExecutors(newArrayList(mainVehicleExecutor, getCoordinatesExecutor, runVehicle1, runVehicle2, runVehicle3));
-                writeToExcel();
-            }
-        });
+        runMainVehicleExecutor();
+        getCoordinatesExecutor();
+        runVehicle1Executor();
+        runVehicle2Executor();
+        runVehicle3Executor();
+        runVehicle4Executor();
+        runVehicle5Executor();
+        runVehicle6Executor();
+        runVehicle7Executor();
     }
 
-    private void shutDownAllExecutors(List<ScheduledExecutorService> executors) {
-        executors.forEach(executor -> executor.shutdownNow());
-    }
-
-    private ScheduledExecutorService runMainVehicleExecutor() {
+    private void runMainVehicleExecutor() {
         ScheduledExecutorService mainVehicleExecutor = Executors.newSingleThreadScheduledExecutor();
         mainVehicleExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -122,10 +111,9 @@ public class Main extends Application {
                 }
             }
         }, 0, MAIN_VEHICLE_FREQUENCY, TimeUnit.MILLISECONDS);
-        return mainVehicleExecutor;
     }
 
-    private ScheduledExecutorService runVehicle1Executor() {
+    private void runVehicle1Executor() {
         ScheduledExecutorService vehicle1Executor = Executors.newSingleThreadScheduledExecutor();
         vehicle1Executor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -143,10 +131,9 @@ public class Main extends Application {
                 }
             }
         }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
-        return vehicle1Executor;
     }
 
-    private ScheduledExecutorService runVehicle2Executor() {
+    private void runVehicle2Executor() {
         ScheduledExecutorService vehicle2Executor = Executors.newSingleThreadScheduledExecutor();
         vehicle2Executor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -164,10 +151,9 @@ public class Main extends Application {
                 }
             }
         }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
-        return vehicle2Executor;
     }
 
-    private ScheduledExecutorService runVehicle3Executor() {
+    private void runVehicle3Executor() {
         ScheduledExecutorService vehicle3Executor = Executors.newSingleThreadScheduledExecutor();
         vehicle3Executor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -185,10 +171,89 @@ public class Main extends Application {
                 }
             }
         }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
-        return vehicle3Executor;
     }
 
-    private ScheduledExecutorService getCoordinatesExecutor() {
+    private void runVehicle4Executor() {
+        ScheduledExecutorService vehicle4Executor = Executors.newSingleThreadScheduledExecutor();
+        vehicle4Executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("New scheduled iteration. Vehicle4: " + vehicle4.getTargetList());
+                if (!isEmpty(vehicle4.getTargetList())) {
+                    System.out.println("Move vehicle 4 to new target");
+                    try {
+                        approximateWay(vehicle4, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle4, 1, vehicle4.getApproximateTargetList());
+                        //moveVehicle(vehicle4, 1, null);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
+    }
+
+    private void runVehicle5Executor() {
+        ScheduledExecutorService vehicle5Executor = Executors.newSingleThreadScheduledExecutor();
+        vehicle5Executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("New scheduled iteration. Vehicle5: " + vehicle5.getTargetList());
+                if (!isEmpty(vehicle5.getTargetList())) {
+                    System.out.println("Move vehicle 5 to new target");
+                    try {
+                        approximateWay(vehicle5, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle5, 1, vehicle5.getApproximateTargetList());
+                        //moveVehicle(vehicle5, 1, null);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
+    }
+
+    private void runVehicle6Executor() {
+        ScheduledExecutorService vehicle6Executor = Executors.newSingleThreadScheduledExecutor();
+        vehicle6Executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("New scheduled iteration. Vehicle6: " + vehicle6.getTargetList());
+                if (!isEmpty(vehicle6.getTargetList())) {
+                    System.out.println("Move vehicle 6 to new target");
+                    try {
+                        approximateWay(vehicle6, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle6, 1, vehicle6.getApproximateTargetList());
+                        //moveVehicle(vehicle6, 1, null);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
+    }
+
+    private void runVehicle7Executor() {
+        ScheduledExecutorService vehicle7Executor = Executors.newSingleThreadScheduledExecutor();
+        vehicle7Executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("New scheduled iteration. Vehicle7: " + vehicle7.getTargetList());
+                if (!isEmpty(vehicle7.getTargetList())) {
+                    System.out.println("Move vehicle 7 to new target");
+                    try {
+                        approximateWay(vehicle7, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle7, 1, vehicle7.getApproximateTargetList());
+                        //moveVehicle(vehicle7, 1, null);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
+    }
+
+    private void getCoordinatesExecutor() {
         ScheduledExecutorService getCoordinates = Executors.newSingleThreadScheduledExecutor();
         getCoordinates.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -203,9 +268,20 @@ public class Main extends Application {
                 if (isEmpty(vehicle3.getTargetList()) || !vehicle2.getCurrentPos().equals(vehicle3.getTargetList().element())) {
                     vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError());
                 }
+                if (isEmpty(vehicle4.getTargetList()) || !vehicle3.getCurrentPos().equals(vehicle4.getTargetList().element())) {
+                    vehicle4.getTargetList().add(vehicle3.getCurrentPosWithMeasurementError());
+                }
+                if (isEmpty(vehicle5.getTargetList()) || !vehicle4.getCurrentPos().equals(vehicle5.getTargetList().element())) {
+                    vehicle5.getTargetList().add(vehicle4.getCurrentPosWithMeasurementError());
+                }
+                if (isEmpty(vehicle6.getTargetList()) || !vehicle5.getCurrentPos().equals(vehicle6.getTargetList().element())) {
+                    vehicle6.getTargetList().add(vehicle5.getCurrentPosWithMeasurementError());
+                }
+                if (isEmpty(vehicle7.getTargetList()) || !vehicle6.getCurrentPos().equals(vehicle7.getTargetList().element())) {
+                    vehicle7.getTargetList().add(vehicle6.getCurrentPosWithMeasurementError());
+                }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
-        return getCoordinates;
     }
 
     private boolean notRepeatedPos(Pos currentPos, Pos lastElement, float area) {
@@ -259,7 +335,7 @@ public class Main extends Application {
         pane.setMinSize(1800, 1000);
         pane.setMaxSize(1800, 1000);
 
-        vBox.getChildren().addAll(inputX, valueX, inputY, valueY, ok, excel, pane);
+        vBox.getChildren().addAll(inputX, valueX, inputY, valueY, ok, pane);
         group.getChildren().add(vBox);
 
         final Scene scene = new Scene(group, 1800, 1000);
@@ -327,7 +403,6 @@ public class Main extends Application {
             }
 
             vehicle.setApproximateTargetList(approximateWay);
-            vehicle.getApproximateList().addAll(approximateWay);
             vehicle.getTargetList().clear();
         }
     }
@@ -445,70 +520,6 @@ public class Main extends Application {
         }
         return false;
     }
-
-    public void writeToExcel() {
-
-        XSSFWorkbook workbook = new XSSFWorkbook();
-        XSSFSheet sheet = workbook.createSheet("Data");
-
-        int rowNum = 0;
-        System.out.println("Creating excel");
-
-        Row heading = sheet.createRow(rowNum++);
-        String[] head = {"main X","main Y","vehicle 1 X","vehicle 1 Y","vehicle 2 X","vehicle 2 Y","vehicle 3 X","vehicle 3 Y"};
-        int headColNum = 0;
-        for (String s : head) {
-            Cell cell = heading.createCell(headColNum++);
-            cell.setCellValue(s);
-        }
-
-        createListRecord(sheet,
-                newArrayList(mainVehicle.getList(),vehicle1.getApproximateList(),
-                        vehicle2.getApproximateList(), vehicle3.getApproximateList()));
-
-        try {
-            FileOutputStream outputStream = new FileOutputStream(FILE_NAME);
-            workbook.write(outputStream);
-            workbook.close();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        System.out.println("Done");
-    }
-
-    private void createListRecord(XSSFSheet sheet, List<List<Pos>> list) {
-        int rowNum = 1;
-        int firstColNum = 0;
-        int secondColNum = 1;
-        int maxLength = 0;
-        for (List<Pos> l : list) {
-            if (l.size() > maxLength) {
-                maxLength = l.size();
-            }
-        }
-        for (int i = 1;i<=maxLength;i++) {
-            sheet.createRow(i);
-        }
-        for (List<Pos> data : list) {
-            for (Pos pos : data) {
-                Row row = sheet.getRow(rowNum++);
-                Cell cell1 = row.createCell(firstColNum);
-                cell1.setCellValue(pos.getX());
-                Cell cell2 = row.createCell(secondColNum);
-                cell2.setCellValue(pos.getY());
-            }
-            firstColNum+=2;
-            secondColNum+=2;
-            rowNum = 1;
-        }
-    }
 }
 
 //TODO сделать оси, чтобы понятен был масштаб
-//TODO посчитать максимальное отклонение алгоритма от идеальной траектории
-//TODO добавить координаты главного тс всем остальным тс.
-// Делать проверку, еслт расстояние до точки из траектории главного тс  меньше, чем до точки из алгоритма
-// обрабатывать острые углы на месте
