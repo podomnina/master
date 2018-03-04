@@ -13,7 +13,7 @@ public class Vehicle {
     private Queue<Pos> targetList;
     private Circle circle;
     private Queue<Pos> approximateTargetList;
-    private Queue<Pos> etalonTargetList;
+    private Queue<Pos> etalonTargetList = new LinkedList<>();
 
     private List<Pos> approximateList = new ArrayList<>();
     private List<Pos> list = new ArrayList<>();

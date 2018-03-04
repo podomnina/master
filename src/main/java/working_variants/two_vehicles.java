@@ -15,7 +15,14 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import model.Pos;
 import model.Vehicle;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -31,6 +38,7 @@ public class two_vehicles extends Application {
     private TextField valueX = new TextField();
     private TextField valueY = new TextField();
     private Button ok = new Button("ok");
+    private Button excel = new Button("Write results to excel");
 
     private Vehicle mainVehicle;
     private Vehicle vehicle1;
@@ -42,6 +50,11 @@ public class two_vehicles extends Application {
     public static final float GPS_MEASUREMENT_ERROR = 20;
     public static final int NUMBER_OF_POINTS = 20;
     public static final float ALGORITHM_MEASUREMENT_ERROR = 0.01f;
+
+
+    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
+
+    private Long timer = 0L;
 
     public static void main(String[] args) {
         launch(args);
@@ -70,14 +83,27 @@ public class two_vehicles extends Application {
         queue.add(new Pos(100, 600));
         queue.add(new Pos(1000, 600));
         queue.add(new Pos(500, 300));
-        mainVehicle.setTargetList(queue);
 
-        runMainVehicleExecutor();
-        getCoordinatesExecutor();
-        runVehicle1Executor();
+        mainVehicle.setTargetList(queue);
+        mainVehicle.setList(newArrayList(queue));
+
+        ScheduledExecutorService mainVehicleExecutor = runMainVehicleExecutor();
+        ScheduledExecutorService getCoordinatesExecutor = getCoordinatesExecutor();
+        ScheduledExecutorService runVehicle1 = runVehicle1Executor();
+        excel.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                shutDownAllExecutors(newArrayList(mainVehicleExecutor, getCoordinatesExecutor, runVehicle1));
+                writeToExcel();
+            }
+        });
     }
 
-    private void runMainVehicleExecutor() {
+    private void shutDownAllExecutors(List<ScheduledExecutorService> executors) {
+        executors.forEach(executor -> executor.shutdownNow());
+    }
+
+    private ScheduledExecutorService runMainVehicleExecutor() {
         ScheduledExecutorService mainVehicleExecutor = Executors.newSingleThreadScheduledExecutor();
         mainVehicleExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -93,9 +119,10 @@ public class two_vehicles extends Application {
                 }
             }
         }, 0, MAIN_VEHICLE_FREQUENCY, TimeUnit.MILLISECONDS);
+        return mainVehicleExecutor;
     }
 
-    private void runVehicle1Executor() {
+    private ScheduledExecutorService runVehicle1Executor() {
         ScheduledExecutorService vehicle1Executor = Executors.newSingleThreadScheduledExecutor();
         vehicle1Executor.scheduleWithFixedDelay(new Runnable() {
             @Override
@@ -113,19 +140,23 @@ public class two_vehicles extends Application {
                 }
             }
         }, 0, VEHICLE1_FREQUENCY, TimeUnit.MILLISECONDS);
+        return vehicle1Executor;
     }
 
-    private void getCoordinatesExecutor() {
+    private ScheduledExecutorService getCoordinatesExecutor() {
         ScheduledExecutorService getCoordinates = Executors.newSingleThreadScheduledExecutor();
         getCoordinates.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
                 System.out.println("Get coordinates of main vehicle");
+                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError();
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
-                    vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError());
+                    vehicle1.getTargetList().add(etalonPos);
+                    vehicle1.getList().add(etalonPos);
                 }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
+        return getCoordinates;
     }
 
     private boolean notRepeatedPos(Pos currentPos, Pos lastElement, float area) {
@@ -155,7 +186,14 @@ public class two_vehicles extends Application {
 
             Platform.runLater(() -> {
                 vehicle.redrawCircle();
-                pane.getChildren().add(new Circle(vehicle.getCurrentPos().getX(), vehicle.getCurrentPos().getY(), 1, vehicle.getCircle().getFill()));
+                timer++;
+                if (timer > 10 && timer < 20) {
+                    pane.getChildren().add(new Circle(mainVehicle.getCurrentPos().getX(), mainVehicle.getCurrentPos().getY(), 1, mainVehicle.getCircle().getFill()));
+                }
+                if (timer == 20) {
+                    timer = 0L;
+                }
+                pane.getChildren().add(new Circle(vehicle1.getCurrentPos().getX(), vehicle1.getCurrentPos().getY(), 1, vehicle1.getCircle().getFill()));
             });
         }
     }
@@ -179,7 +217,7 @@ public class two_vehicles extends Application {
         pane.setMinSize(1800, 1000);
         pane.setMaxSize(1800, 1000);
 
-        vBox.getChildren().addAll(inputX, valueX, inputY, valueY, ok, pane);
+        vBox.getChildren().addAll(inputX, valueX, inputY, valueY, ok, excel, pane);
         group.getChildren().add(vBox);
 
         final Scene scene = new Scene(group, 1800, 1000);
@@ -247,6 +285,7 @@ public class two_vehicles extends Application {
             }
 
             vehicle.setApproximateTargetList(approximateWay);
+            vehicle.getApproximateList().addAll(approximateWay);
             vehicle.getTargetList().clear();
         }
     }
@@ -363,6 +402,65 @@ public class two_vehicles extends Application {
             return delX < measurementError && delY < measurementError;
         }
         return false;
+    }
+
+    public void writeToExcel() {
+
+        XSSFWorkbook workbook = new XSSFWorkbook();
+        XSSFSheet sheet = workbook.createSheet("Data");
+
+        int rowNum = 0;
+        System.out.println("Creating excel");
+
+        Row heading = sheet.createRow(rowNum++);
+        String[] head = {"main X","main Y","vehicle 1 X","vehicle 1 Y","vehicle 2 X","vehicle 2 Y","vehicle 3 X","vehicle 3 Y"};
+        int headColNum = 0;
+        for (String s : head) {
+            Cell cell = heading.createCell(headColNum++);
+            cell.setCellValue(s);
+        }
+
+        createListRecord(sheet,
+                newArrayList(mainVehicle.getList(),vehicle1.getList()));
+
+        try {
+            FileOutputStream outputStream = new FileOutputStream(FILE_NAME);
+            workbook.write(outputStream);
+            workbook.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        System.out.println("Done");
+    }
+
+    private void createListRecord(XSSFSheet sheet, List<List<Pos>> list) {
+        int rowNum = 1;
+        int firstColNum = 0;
+        int secondColNum = 1;
+        int maxLength = 0;
+        for (List<Pos> l : list) {
+            if (l.size() > maxLength) {
+                maxLength = l.size();
+            }
+        }
+        for (int i = 1;i<=maxLength;i++) {
+            sheet.createRow(i);
+        }
+        for (List<Pos> data : list) {
+            for (Pos pos : data) {
+                Row row = sheet.getRow(rowNum++);
+                Cell cell1 = row.createCell(firstColNum);
+                cell1.setCellValue(pos.getX());
+                Cell cell2 = row.createCell(secondColNum);
+                cell2.setCellValue(pos.getY());
+            }
+            firstColNum+=2;
+            secondColNum+=2;
+            rowNum = 1;
+        }
     }
 }
 

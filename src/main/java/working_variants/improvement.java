@@ -195,14 +195,17 @@ public class improvement extends Application {
             @Override
             public void run() {
                 System.out.println("Get coordinates of main vehicle");
+                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError();
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
-                    vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError());
+                    vehicle1.getTargetList().add(etalonPos);
                 }
                 if (isEmpty(vehicle2.getTargetList()) || !vehicle1.getCurrentPos().equals(vehicle2.getTargetList().element())) {
                     vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError());
+                    vehicle2.getEtalonTargetList().add(etalonPos);
                 }
                 if (isEmpty(vehicle3.getTargetList()) || !vehicle2.getCurrentPos().equals(vehicle3.getTargetList().element())) {
                     vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError());
+                    vehicle3.getEtalonTargetList().add(etalonPos);
                 }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
