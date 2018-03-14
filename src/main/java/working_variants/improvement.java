@@ -54,7 +54,9 @@ public class improvement extends Application {
     public static final int NUMBER_OF_POINTS = 20;
     public static final float ALGORITHM_MEASUREMENT_ERROR = 0.01f;
 
-    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
+    private Long timer = 0L;
+
+    private static final String FILE_NAME = "C:\\Users\\podo0716\\sandbox\\master\\src\\main\\resources\\tmp\\data.xlsx";
 
     public static void main(String[] args) {
         launch(args);
@@ -201,11 +203,11 @@ public class improvement extends Application {
                 }
                 if (isEmpty(vehicle2.getTargetList()) || !vehicle1.getCurrentPos().equals(vehicle2.getTargetList().element())) {
                     vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError());
-                    vehicle2.getEtalonTargetList().add(etalonPos);
+                    //vehicle2.getEtalonTargetList().add(etalonPos);
                 }
                 if (isEmpty(vehicle3.getTargetList()) || !vehicle2.getCurrentPos().equals(vehicle3.getTargetList().element())) {
                     vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError());
-                    vehicle3.getEtalonTargetList().add(etalonPos);
+                    //vehicle3.getEtalonTargetList().add(etalonPos);
                 }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
@@ -239,7 +241,20 @@ public class improvement extends Application {
 
             Platform.runLater(() -> {
                 vehicle.redrawCircle();
-                pane.getChildren().add(new Circle(vehicle.getCurrentPos().getX(), vehicle.getCurrentPos().getY(), 1, vehicle.getCircle().getFill()));
+                timer++;
+                if (timer > 0 && timer < 5) {
+                    pane.getChildren().add(new Circle(vehicle1.getCurrentPos().getX(), vehicle1.getCurrentPos().getY(), 1, vehicle1.getCircle().getFill()));
+                }
+                if (timer > 0 && timer < 20) {
+                    pane.getChildren().add(new Circle(vehicle2.getCurrentPos().getX(), vehicle2.getCurrentPos().getY(), 1, vehicle2.getCircle().getFill()));
+                }
+                if (timer > 0 && timer < 30) {
+                    pane.getChildren().add(new Circle(vehicle3.getCurrentPos().getX(), vehicle3.getCurrentPos().getY(), 1, vehicle3.getCircle().getFill()));
+                }
+                if (timer == 50) {
+                    timer = 0L;
+                }
+                pane.getChildren().add(new Circle(mainVehicle.getCurrentPos().getX(), mainVehicle.getCurrentPos().getY(), 0.5, mainVehicle.getCircle().getFill()));
             });
         }
     }
