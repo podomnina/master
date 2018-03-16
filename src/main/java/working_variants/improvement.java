@@ -46,6 +46,8 @@ public class improvement extends Application {
     private Vehicle vehicle2;
     private Vehicle vehicle3;
 
+    private Queue<Pos> mainVehicleApproximateTargetListWithError = new LinkedList<>();
+
     private static final long MAIN_VEHICLE_FREQUENCY = 5000;
     private static final long VEHICLE1_FREQUENCY = 100;
     private static final long GET_COORDINATES_FREQUENCY = 1000;
@@ -114,9 +116,9 @@ public class improvement extends Application {
         mainVehicleExecutor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                System.out.println("New scheduled iteration. MainVehicle: " + mainVehicle.getTargetList().size());
+                //System.out.println("New scheduled iteration. MainVehicle: " + mainVehicle.getTargetList().size());
                 if (!isEmpty(mainVehicle.getTargetList())) {
-                    System.out.println("Move main vehicle to new target");
+                    //System.out.println("Move main vehicle to new target");
                     try {
                         moveVehicle(mainVehicle, 1, mainVehicle.getTargetList());
                     } catch (Throwable e) {
@@ -134,10 +136,12 @@ public class improvement extends Application {
             @Override
             public void run() {
                 System.out.println("New scheduled iteration. Vehicle1: " + vehicle1.getTargetList());
+                System.out.println("Vehicle1 approximate target list: " + vehicle1.getApproximateTargetList());
                 if (!isEmpty(vehicle1.getTargetList())) {
-                    System.out.println("Move vehicle 1 to new target");
+                    //System.out.println("Move vehicle 1 to new target");
                     try {
                         approximateWay(vehicle1, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        mainVehicleApproximateTargetListWithError.addAll(vehicle1.getApproximateTargetList());
                         moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
                         // moveVehicle(vehicle1, 1, null);
                     } catch (Throwable e) {
@@ -154,9 +158,9 @@ public class improvement extends Application {
         vehicle2Executor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                System.out.println("New scheduled iteration. Vehicle2: " + vehicle2.getTargetList());
+                //System.out.println("New scheduled iteration. Vehicle2: " + vehicle2.getTargetList());
                 if (!isEmpty(vehicle2.getTargetList())) {
-                    System.out.println("Move vehicle 2 to new target");
+                    //System.out.println("Move vehicle 2 to new target");
                     try {
                         approximateWay(vehicle2, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
                         moveVehicle(vehicle2, 1, vehicle2.getApproximateTargetList());
@@ -175,12 +179,14 @@ public class improvement extends Application {
         vehicle3Executor.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                System.out.println("New scheduled iteration. Vehicle3: " + vehicle3.getTargetList());
+                //System.out.println("New scheduled iteration. Vehicle3: " + vehicle3.getTargetList());
                 if (!isEmpty(vehicle3.getTargetList())) {
-                    System.out.println("Move vehicle 3 to new target");
+                    //System.out.println("Move vehicle 3 to new target");
                     try {
                         approximateWay(vehicle3, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
-                        moveVehicle(vehicle3, 1, vehicle3.getApproximateTargetList());
+                        final Queue<Pos> convergenceWay = convergenceTwoWays(vehicle3, vehicle3.getApproximateTargetList(), mainVehicleApproximateTargetListWithError);
+                        System.out.println("Convergence way: " + convergenceWay);
+                        moveVehicle(vehicle3, 1, convergenceWay);
                         //moveVehicle(vehicle3, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
@@ -196,7 +202,7 @@ public class improvement extends Application {
         getCoordinates.scheduleWithFixedDelay(new Runnable() {
             @Override
             public void run() {
-                System.out.println("Get coordinates of main vehicle");
+                //System.out.println("Get coordinates of main vehicle");
                 Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError();
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
                     vehicle1.getTargetList().add(etalonPos);
@@ -523,6 +529,34 @@ public class improvement extends Application {
             secondColNum+=2;
             rowNum = 1;
         }
+    }
+
+    private Queue<Pos> convergenceTwoWays(final Vehicle vehicle, final Queue<Pos> firstWay, final Queue<Pos> secondWay) {
+        final Queue<Pos> convergence = new LinkedList<>();
+        if (!isEmpty(firstWay) && !isEmpty(secondWay)) {
+            final Pos first = firstWay.element();
+            final Pos second = secondWay.remove();
+            final Pos currentPos = vehicle.getCurrentPos();
+            if (first != null && second != null && currentPos != null) {
+                float firstDist = getDistance(first, currentPos);
+                float secondDist = getDistance(second, currentPos);
+                if (firstDist < secondDist) {
+                    convergence.add(first);
+                } else {
+                    convergence.add(second);
+                }
+            }
+        }
+        return convergence;
+    }
+
+    private float getDistance(final Pos first, final Pos second) {
+        final float delX = first.getX() - second.getX();
+        final float delY = first.getY() - second.getY();
+        if (Math.abs(delX) > 0.05 && Math.abs(delY) > 0.05) {
+            return (float) Math.sqrt(delX*delX + delY*delY);
+        } else
+            return 0;
     }
 }
 
