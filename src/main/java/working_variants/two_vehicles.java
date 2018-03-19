@@ -29,6 +29,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static com.google.common.collect.Lists.newLinkedList;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 
@@ -52,7 +53,7 @@ public class two_vehicles extends Application {
     public static final float ALGORITHM_MEASUREMENT_ERROR = 0.01f;
 
 
-    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
+    private static final String FILE_NAME = "C:\\Users\\podo0716\\sandbox\\master\\src\\main\\resources\\tmp\\data.xlsx";
 
     private Long timer = 0L;
 
@@ -64,8 +65,8 @@ public class two_vehicles extends Application {
     public void start(Stage stage) {
         initGUI(stage);
 
-        mainVehicle = createVehicle(0L, new Pos(100, 50), Color.RED, pane);
-        vehicle1 = createVehicle(1L, new Pos(100, 100), Color.ORANGE, pane);
+        mainVehicle = createVehicle(0L, new Pos(100, 100), Color.RED, pane);
+        vehicle1 = createVehicle(1L, new Pos(100, 150), Color.ORANGE, pane);
 
         ok.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
@@ -79,13 +80,28 @@ public class two_vehicles extends Application {
         });
 
         Queue queue = new LinkedList();
-        queue.add(new Pos(1000, 100));
-        queue.add(new Pos(100, 600));
-        queue.add(new Pos(1000, 600));
-        queue.add(new Pos(500, 300));
+        queue.add(new Pos(300, 100));
+        queue.add(new Pos(400, 200));
+        queue.add(new Pos(400, 400));
+        queue.add(new Pos(500, 500));
+        queue.add(new Pos(700, 500));
+        queue.add(new Pos(700, 200));
+        queue.add(new Pos(800, 100));
+        queue.add(new Pos(1300, 100));
+        queue.add(new Pos(1500, 300));
+        queue.add(new Pos(1500, 700));
+        queue.add(new Pos(1400, 800));
+        queue.add(new Pos(1100, 800));
+        queue.add(new Pos(1000, 700));
+        queue.add(new Pos(800, 700));
+        queue.add(new Pos(700, 800));
+        queue.add(new Pos(100, 800));
 
         mainVehicle.setTargetList(queue);
-        mainVehicle.setList(newArrayList(queue));
+        final List<Pos> list = newArrayList();
+        list.add(mainVehicle.getCurrentPos());
+        list.addAll(newArrayList(queue));
+        mainVehicle.setList(list);
 
         ScheduledExecutorService mainVehicleExecutor = runMainVehicleExecutor();
         ScheduledExecutorService getCoordinatesExecutor = getCoordinatesExecutor();
@@ -131,9 +147,9 @@ public class two_vehicles extends Application {
                 if (!isEmpty(vehicle1.getTargetList())) {
                     System.out.println("Move vehicle 1 to new target");
                     try {
-                        //approximateWay(vehicle1, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
-                        //moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
-                        moveVehicle(vehicle1, 1, null);
+                        approximateWay(vehicle1, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
+                        //moveVehicle(vehicle1, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
