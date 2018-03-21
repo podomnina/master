@@ -19,7 +19,7 @@ public class Vehicle {
     private List<Pos> list = new ArrayList<>();
 
 
-    public static final float GPS_MEASUREMENT_ERROR = 20;
+    public static final float GPS_MEASUREMENT_ERROR = 50;
 
     public Vehicle(Long id, Pos currentPos, Queue<Pos> targetList, Circle circle) {
         this.id = id;

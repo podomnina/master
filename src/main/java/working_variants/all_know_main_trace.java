@@ -153,7 +153,6 @@ public class all_know_main_trace extends Application {
                     //System.out.println("Move vehicle 1 to new target");
                     try {
                         approximateWay(vehicle1, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
-                        mainVehicleApproximateTargetListWithError.addAll(vehicle1.getApproximateTargetList());
                         moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
                         // moveVehicle(vehicle1, 1, null);
                     } catch (Throwable e) {
@@ -174,8 +173,9 @@ public class all_know_main_trace extends Application {
                 if (!isEmpty(vehicle2.getTargetList())) {
                     //System.out.println("Move vehicle 2 to new target");
                     try {
-                        approximateWay(vehicle2, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
-                        moveVehicle(vehicle2, 1, vehicle2.getApproximateTargetList());
+                        //approximateWay(vehicle2, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        Queue<Pos> way = convergenceTwoWays(vehicle2, vehicle1, vehicle1.getApproximateTargetList());
+                        moveVehicle(vehicle2, 1, way);
                         //moveVehicle(vehicle2, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
@@ -195,10 +195,11 @@ public class all_know_main_trace extends Application {
                 if (!isEmpty(vehicle3.getTargetList())) {
                     //System.out.println("Move vehicle 3 to new target");
                     try {
-                        approximateWay(vehicle3, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                        //approximateWay(vehicle3, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
                         //final Queue<Pos> convergenceWay = convergenceTwoWays(vehicle3, vehicle3.getApproximateTargetList(), mainVehicleApproximateTargetListWithError);
                         //System.out.println("Convergence way: " + convergenceWay);
-                        moveVehicle(vehicle3, 1, vehicle3.getApproximateTargetList());
+                        Queue<Pos> way = convergenceTwoWays(vehicle3, vehicle2, vehicle1.getApproximateTargetList());
+                        moveVehicle(vehicle3, 1, way);
                         //moveVehicle(vehicle3, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
@@ -545,19 +546,17 @@ public class all_know_main_trace extends Application {
         }
     }
 
-    private Queue<Pos> convergenceTwoWays(final Vehicle vehicle, final Queue<Pos> firstWay, final Queue<Pos> secondWay) {
+    private Queue<Pos> convergenceTwoWays(final Vehicle vehicle, final Vehicle mainVehicle, final Queue<Pos> way) {
         final Queue<Pos> convergence = new LinkedList<>();
-        if (!isEmpty(firstWay) && !isEmpty(secondWay)) {
-            final Pos first = firstWay.element();
-            final Pos second = secondWay.remove();
+        if (!isEmpty(way)) {
+            final Pos nextPoint = way.remove();
             final Pos currentPos = vehicle.getCurrentPos();
-            if (first != null && second != null && currentPos != null) {
-                float firstDist = getDistance(first, currentPos);
-                float secondDist = getDistance(second, currentPos);
-                if (firstDist < secondDist) {
-                    convergence.add(first);
-                } else {
-                    convergence.add(second);
+            final Pos mainVehicleCurrentPos = mainVehicle.getCurrentPosWithMeasurementError();
+            if (nextPoint != null && currentPos != null && mainVehicleCurrentPos != null) {
+                float firstDist = getDistance(currentPos, mainVehicleCurrentPos);
+                float secondDist = getDistance(currentPos, nextPoint);
+                if (firstDist > secondDist) {
+                    convergence.add(nextPoint);
                 }
             }
         }

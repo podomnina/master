@@ -46,15 +46,13 @@ public class improvement extends Application {
     private Vehicle vehicle2;
     private Vehicle vehicle3;
 
-    private Queue<Pos> mainVehicleApproximateTargetListWithError = new LinkedList<>();
-
     private static final long MAIN_VEHICLE_FREQUENCY = 5000;
     private static final long VEHICLE1_FREQUENCY = 100;
     private static final long GET_COORDINATES_FREQUENCY = 1000;
 
-    public static final float GPS_MEASUREMENT_ERROR = 20;
-    public static final int NUMBER_OF_POINTS = 20;
-    public static final float ALGORITHM_MEASUREMENT_ERROR = 0.01f;
+    public static final float GPS_MEASUREMENT_ERROR = 50;
+    public static final int NUMBER_OF_POINTS = 50;
+    public static final float ALGORITHM_MEASUREMENT_ERROR = 0.5f;
 
     private Long timer = 0L;
 
@@ -85,10 +83,10 @@ public class improvement extends Application {
         });
 
         Queue queue = new LinkedList();
-        queue.add(new Pos(1000, 100));
-        queue.add(new Pos(100, 600));
+        //queue.add(new Pos(100, 50));
+        queue.add(new Pos(1000, 50));
         queue.add(new Pos(1000, 600));
-        queue.add(new Pos(500, 300));
+        queue.add(new Pos(100, 600));
 
         mainVehicle.setTargetList(queue);
         mainVehicle.setList(newArrayList(queue));
@@ -141,7 +139,6 @@ public class improvement extends Application {
                     //System.out.println("Move vehicle 1 to new target");
                     try {
                         approximateWay(vehicle1, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
-                        mainVehicleApproximateTargetListWithError.addAll(vehicle1.getApproximateTargetList());
                         moveVehicle(vehicle1, 1, vehicle1.getApproximateTargetList());
                         // moveVehicle(vehicle1, 1, null);
                     } catch (Throwable e) {
@@ -184,9 +181,7 @@ public class improvement extends Application {
                     //System.out.println("Move vehicle 3 to new target");
                     try {
                         approximateWay(vehicle3, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
-                        final Queue<Pos> convergenceWay = convergenceTwoWays(vehicle3, vehicle3.getApproximateTargetList(), mainVehicleApproximateTargetListWithError);
-                        System.out.println("Convergence way: " + convergenceWay);
-                        moveVehicle(vehicle3, 1, convergenceWay);
+                        moveVehicle(vehicle3, 1, vehicle3.getApproximateTargetList());
                         //moveVehicle(vehicle3, 1, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
