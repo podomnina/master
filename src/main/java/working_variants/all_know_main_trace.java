@@ -84,22 +84,9 @@ public class all_know_main_trace extends Application {
         });
 
         Queue queue = new LinkedList();
-        queue.add(new Pos(300, 100));
-        queue.add(new Pos(400, 200));
-        queue.add(new Pos(400, 400));
-        queue.add(new Pos(500, 500));
-        queue.add(new Pos(700, 500));
-        queue.add(new Pos(700, 200));
-        queue.add(new Pos(800, 100));
-        queue.add(new Pos(1300, 100));
-        queue.add(new Pos(1500, 300));
-        queue.add(new Pos(1500, 700));
-        queue.add(new Pos(1400, 800));
-        queue.add(new Pos(1100, 800));
-        queue.add(new Pos(1000, 700));
-        queue.add(new Pos(800, 700));
-        queue.add(new Pos(700, 800));
-        queue.add(new Pos(100, 800));
+        queue.add(new Pos(1000, 50));
+        queue.add(new Pos(1000, 600));
+        queue.add(new Pos(100, 600));
 
         mainVehicle.setTargetList(queue);
         mainVehicle.setList(newArrayList(queue));
@@ -244,12 +231,17 @@ public class all_know_main_trace extends Application {
         if (isEmpty(targetList)) {
             return;
         }
-        Pos to = targetList.remove();
+        Pos to;
         if (convergence) {
+            to = targetList.element();
             to = convergenceTwoWays(vehicle, previousVehicle, to);
             if (to == null) {
                 return;
+            } else {
+                targetList.remove(to);
             }
+        } else {
+            to = targetList.remove();
         }
         while (true) {
             final Pos from = vehicle.getCurrentPos();
