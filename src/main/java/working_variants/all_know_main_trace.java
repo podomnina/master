@@ -203,7 +203,7 @@ public class all_know_main_trace extends Application {
             @Override
             public void run() {
                 //System.out.println("Get coordinates of main vehicle");
-                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError();
+                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR);
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
                     vehicle1.getTargetList().add(etalonPos);
                 }
@@ -546,7 +546,7 @@ public class all_know_main_trace extends Application {
 
     private Pos convergenceTwoWays(final Vehicle vehicle, final Vehicle previousVehicle, final Pos nextPoint) {
         final Pos currentPos = vehicle.getCurrentPos();
-        final Pos previousVehicleCurrentPos = previousVehicle.getCurrentPosWithMeasurementError();
+        final Pos previousVehicleCurrentPos = previousVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR);
         if (nextPoint != null && currentPos != null && previousVehicleCurrentPos != null) {
             float firstDist = getDistance(currentPos, previousVehicleCurrentPos);
             float secondDist = getDistance(currentPos, nextPoint);

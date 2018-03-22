@@ -260,25 +260,25 @@ public class eight_vehicles extends Application {
             public void run() {
                 System.out.println("Get coordinates of main vehicle");
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
-                    vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError());
+                    vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle2.getTargetList()) || !vehicle1.getCurrentPos().equals(vehicle2.getTargetList().element())) {
-                    vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError());
+                    vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle3.getTargetList()) || !vehicle2.getCurrentPos().equals(vehicle3.getTargetList().element())) {
-                    vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError());
+                    vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle4.getTargetList()) || !vehicle3.getCurrentPos().equals(vehicle4.getTargetList().element())) {
-                    vehicle4.getTargetList().add(vehicle3.getCurrentPosWithMeasurementError());
+                    vehicle4.getTargetList().add(vehicle3.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle5.getTargetList()) || !vehicle4.getCurrentPos().equals(vehicle5.getTargetList().element())) {
-                    vehicle5.getTargetList().add(vehicle4.getCurrentPosWithMeasurementError());
+                    vehicle5.getTargetList().add(vehicle4.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle6.getTargetList()) || !vehicle5.getCurrentPos().equals(vehicle6.getTargetList().element())) {
-                    vehicle6.getTargetList().add(vehicle5.getCurrentPosWithMeasurementError());
+                    vehicle6.getTargetList().add(vehicle5.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle7.getTargetList()) || !vehicle6.getCurrentPos().equals(vehicle7.getTargetList().element())) {
-                    vehicle7.getTargetList().add(vehicle6.getCurrentPosWithMeasurementError());
+                    vehicle7.getTargetList().add(vehicle6.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);

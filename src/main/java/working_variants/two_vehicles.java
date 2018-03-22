@@ -165,7 +165,7 @@ public class two_vehicles extends Application {
             @Override
             public void run() {
                 System.out.println("Get coordinates of main vehicle");
-                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError();
+                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR);
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
                     vehicle1.getTargetList().add(etalonPos);
                     vehicle1.getList().add(etalonPos);

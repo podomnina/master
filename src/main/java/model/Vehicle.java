@@ -17,9 +17,7 @@ public class Vehicle {
 
     private List<Pos> approximateList = new ArrayList<>();
     private List<Pos> list = new ArrayList<>();
-
-
-    public static final float GPS_MEASUREMENT_ERROR = 20;
+    private float distance = 0;
 
     public Vehicle(Long id, Pos currentPos, Queue<Pos> targetList, Circle circle) {
         this.id = id;
@@ -38,7 +36,7 @@ public class Vehicle {
         circle.setCenterY(currentPos.getY());
     }
 
-    public Pos getCurrentPosWithMeasurementError() {
+    public Pos getCurrentPosWithMeasurementError(float GPS_MEASUREMENT_ERROR) {
         if (currentPos != null) {
             float resX = (float) (Math.random()*2*GPS_MEASUREMENT_ERROR - GPS_MEASUREMENT_ERROR);
             float resY = (float) (Math.random()*2*GPS_MEASUREMENT_ERROR - GPS_MEASUREMENT_ERROR);

@@ -19,6 +19,7 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import model.Pos;
 import model.Vehicle;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
@@ -33,12 +34,17 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 import static com.google.common.collect.Lists.newArrayList;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.collections4.CollectionUtils.isEmpty;
 
 public class MainApplication extends Application {
 
     private Pane drawPane = new Pane();
     private TextField nField = new TextField();
+    private TextField gpsErrorField = new TextField();
+    private TextField numberOfPointsField = new TextField();
+    private TextField algorithmErrorField = new TextField();
     private RadioButton follow = new RadioButton("Следовать друг за другом");
     private RadioButton repeat = new RadioButton("Повторять траекторию главного ТС");
     private RadioButton turnOffAlgorithm = new RadioButton("Без алгоритма");
@@ -49,8 +55,8 @@ public class MainApplication extends Application {
     private Button addTargetButton = new Button("Добавить");
     private Button MAIN_RUN_BUTTON = new Button("Запустить");
     private Button space = new Button();
-    private final ObservableList<PosTable> data =  FXCollections.observableArrayList();
-    private List<Color> colors = newArrayList(Color.ORANGE, Color.YELLOW, Color.GREEN, Color.AQUAMARINE, Color.BLUE, Color.VIOLET, Color.BLACK);
+    private final ObservableList<PosTable> data = FXCollections.observableArrayList();
+    private List<Color> colors = newArrayList(Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.AQUAMARINE, Color.BLUE, Color.VIOLET, Color.BLACK);
 
     private Vehicle mainVehicle;
     private List<Vehicle> vehicles = new ArrayList<>();
@@ -59,16 +65,16 @@ public class MainApplication extends Application {
     private int mode = 0; //0 - ничего, 1 - следование, 2 - повторение, 3 - без алгоритма
 
     private static final long MAIN_VEHICLE_FREQUENCY = 5000;
-    private static final long VEHICLE1_FREQUENCY = 100;
+    private static final long VEHICLE_FREQUENCY = 100;
     private static final long GET_COORDINATES_FREQUENCY = 1000;
 
-    public static final float GPS_MEASUREMENT_ERROR = 50;
-    public static final int NUMBER_OF_POINTS = 50;
-    public static final float ALGORITHM_MEASUREMENT_ERROR = 0.5f;
+    public static float GPS_MEASUREMENT_ERROR = 50;
+    public static int NUMBER_OF_POINTS = 50;
+    public static float ALGORITHM_MEASUREMENT_ERROR = 0.5f;
 
     private Long timer = 0L;
 
-    private static final String FILE_NAME = "C:\\Users\\podo0716\\sandbox\\master\\src\\main\\resources\\tmp\\data.xlsx";
+    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
 
     public static void main(String[] args) {
         launch(args);
@@ -80,31 +86,144 @@ public class MainApplication extends Application {
         final float xPos = 100;
         final float yPos = 50;
         mainVehicle = createVehicle(0L, new Pos(xPos, yPos), Color.RED, drawPane);
+        vehicles.add(mainVehicle);
 
         MAIN_RUN_BUTTON.setOnMousePressed(new EventHandler<MouseEvent>() {
             @Override
             public void handle(MouseEvent event) {
                 n = Integer.parseInt(nField.getText());
-                if (follow.isSelected()) {
-                    mode
+                if (!StringUtils.isEmpty(gpsErrorField.getText())) {
+                    GPS_MEASUREMENT_ERROR = Float.parseFloat(gpsErrorField.getText());
                 }
-
-
+                if (!StringUtils.isEmpty(numberOfPointsField.getText())) {
+                    NUMBER_OF_POINTS = Integer.parseInt(numberOfPointsField.getText());
+                }
+                if (!StringUtils.isEmpty(algorithmErrorField.getText())) {
+                    ALGORITHM_MEASUREMENT_ERROR = Float.parseFloat(algorithmErrorField.getText());
+                }
+                if (follow.isSelected()) {
+                    mode = 1;
+                } else if (repeat.isSelected()) {
+                    mode = 2;
+                } else if (turnOffAlgorithm.isSelected()) {
+                    mode = 3;
+                } else {
+                    mode = 0;
+                }
+                //Берем таргет лист из списка
                 if (!isEmpty(data)) {
                     final Queue<Pos> mainVehicleQueue = new LinkedList();
                     data.forEach(elem -> {
                         mainVehicleQueue.add(new Pos(Float.valueOf(elem.getXVal()), Float.valueOf(elem.getYVal())));
                     });
                     mainVehicle.setTargetList(mainVehicleQueue);
+                    mainVehicle.getList().add(mainVehicle.getCurrentPos());
+                    mainVehicle.getList().addAll(mainVehicleQueue);
                 }
+
+                //Создание ведомых ТС
+                float currentYPos = yPos;
                 for (int i = 1; i < n; i++) {
-                    float currentYPos = yPos;
                     vehicles.add(createVehicle(Long.valueOf(i), new Pos(xPos, currentYPos += 50), colors.get(i), drawPane));
                 }
 
-
+                ScheduledExecutorService getCoordinatesExecutor = getCoordinatesExecutor();
+                ScheduledExecutorService mainVehicleExecutor = runMainVehicleExecutor();
+                executors.addAll(newArrayList(getCoordinatesExecutor, mainVehicleExecutor));
+                for (int i = 1; i < vehicles.size(); i++) {
+                    executors.add(createVehicleExecutor(vehicles.get(i)));
+                }
             }
         });
+        excel.setOnMousePressed(new EventHandler<MouseEvent>() {
+            @Override
+            public void handle(MouseEvent event) {
+                shutDownAllExecutors(executors);
+                writeToExcel();
+            }
+        });
+    }
+
+    private ScheduledExecutorService createVehicleExecutor(Vehicle vehicle) {
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                //System.out.println("New scheduled iteration. Vehicle2: " + vehicle2.getTargetList());
+                if (!isEmpty(vehicle.getTargetList())) {
+                    //System.out.println("Move vehicle 2 to new target");
+                    try {
+                        calculateWayByMode(vehicle);
+                    } catch (Throwable e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }, 0, VEHICLE_FREQUENCY, TimeUnit.MILLISECONDS);
+        return executor;
+    }
+
+    private void calculateWayByMode(Vehicle vehicle) throws InterruptedException {
+        //0 - ничего, 1 - следование, 2 - повторение, 3 - без алгоритма
+        switch (mode) {
+            case 1:
+                approximateWay(vehicle, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                moveVehicle(vehicle, 1, vehicle.getApproximateTargetList(), false, null);
+                break;
+            case 2:
+                if (vehicle.getId() == 1) {
+                    approximateWay(vehicle, NUMBER_OF_POINTS, ALGORITHM_MEASUREMENT_ERROR);
+                    for (int i = 2; i < vehicles.size(); i++) {
+                        vehicles.get(i).getTargetList().addAll(vehicle.getApproximateTargetList());
+                    }
+                    moveVehicle(vehicle, 1, vehicle.getApproximateTargetList(), false, null);
+                } else {
+                    moveVehicle(vehicle, 1, null, true, vehicles.get(1));
+                }
+                break;
+            case 3:
+                moveVehicle(vehicle, 1, null, false, null);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void getCoordinatesByMode(final Vehicle vehicle, Pos pos) {
+        //0 - ничего, 1 - следование, 2 - повторение, 3 - без алгоритма
+        switch (mode) {
+            case 1:
+                vehicle.getTargetList().add(pos);
+                break;
+            case 2:
+
+                break;
+            case 3:
+                vehicle.getTargetList().add(pos);
+                break;
+            default:
+                break;
+        }
+    }
+
+    private ScheduledExecutorService getCoordinatesExecutor() {
+        ScheduledExecutorService getCoordinates = Executors.newSingleThreadScheduledExecutor();
+        getCoordinates.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                //System.out.println("Get coordinates of main vehicle");
+                Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR);
+                if (!isEmpty(vehicles) && vehicles.size() > 1) {
+                    vehicles.get(1).getTargetList().add(etalonPos);
+                    if (vehicles.size() > 2) {
+                        for (int i = 2; i < vehicles.size(); i++) {
+                            getCoordinatesByMode(vehicles.get(i), vehicles.get(i - 1).getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
+                        }
+                    }
+                }
+            }
+        }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
+        return getCoordinates;
     }
 
     private ScheduledExecutorService runMainVehicleExecutor() {
@@ -116,7 +235,8 @@ public class MainApplication extends Application {
                 if (!isEmpty(mainVehicle.getTargetList())) {
                     //System.out.println("Move main vehicle to new target");
                     try {
-                        moveVehicle(mainVehicle, 1, mainVehicle.getTargetList());
+                        System.out.println("Main vehicle coordinates: " + mainVehicle.getCurrentPos());
+                        moveVehicle(mainVehicle, 1, mainVehicle.getTargetList(), false, null);
                     } catch (Throwable e) {
                         e.printStackTrace();
                     }
@@ -126,12 +246,25 @@ public class MainApplication extends Application {
         return mainVehicleExecutor;
     }
 
-    private void moveVehicle(Vehicle vehicle, int step, Queue<Pos> externalTargetList) throws InterruptedException {
+    private void moveVehicle(Vehicle vehicle, int step, Queue<Pos> externalTargetList, boolean convergence, Vehicle previousVehicle) throws InterruptedException {
         Queue<Pos> targetList = externalTargetList != null ? externalTargetList : vehicle.getTargetList();
         if (isEmpty(targetList)) {
             return;
         }
-        final Pos to = targetList.remove();
+        Pos to;
+        if (convergence) {
+            to = targetList.element();
+            to = convergenceTwoWays(vehicle, previousVehicle, to);
+            if (to == null) {
+                return;
+            } else {
+                targetList.remove(to);
+            }
+        } else {
+            to = targetList.remove();
+        }
+        float distance = getDistance(to, vehicle.getCurrentPos());
+        System.out.println("Distance: " + distance);
         while (true) {
             final Pos from = vehicle.getCurrentPos();
             final Pos unitVector = getUnitVector(from, to);
@@ -142,7 +275,8 @@ public class MainApplication extends Application {
             if (((nextPoint.getX() <= to.getX() + 0.5) && (nextPoint.getX() >= to.getX() - 0.5))
                     && ((nextPoint.getY() <= to.getY() + 0.5) && (nextPoint.getY() >= to.getY() - 0.5))) {
                 vehicle.setCurrentPos(to);
-                System.out.println("Vehicle " + vehicle.getId() + " has reached the goal");
+                vehicle.setDistance(vehicle.getDistance() + distance);
+                System.out.println("Vehicle " + vehicle.getId() + " has reached the goal with distance: " + vehicle.getDistance());
                 break;
             }
             Thread.sleep(50);
@@ -150,22 +284,21 @@ public class MainApplication extends Application {
             Platform.runLater(() -> {
                 vehicle.redrawCircle();
                 timer++;
-                if (timer > 0 && timer < 5) {
-                    pane.getChildren().add(new Circle(vehicle1.getCurrentPos().getX(), vehicle1.getCurrentPos().getY(), 1, vehicle1.getCircle().getFill()));
-                }
-                if (timer > 0 && timer < 20) {
-                    pane.getChildren().add(new Circle(vehicle2.getCurrentPos().getX(), vehicle2.getCurrentPos().getY(), 1, vehicle2.getCircle().getFill()));
-                }
-                if (timer > 0 && timer < 30) {
-                    pane.getChildren().add(new Circle(vehicle3.getCurrentPos().getX(), vehicle3.getCurrentPos().getY(), 1, vehicle3.getCircle().getFill()));
-                }
-                if (timer == 50) {
-                    timer = 0L;
-                }
-                pane.getChildren().add(new Circle(mainVehicle.getCurrentPos().getX(), mainVehicle.getCurrentPos().getY(), 0.5, mainVehicle.getCircle().getFill()));
+                long maxTimer = vehicles.size() * 10;
+                vehicles.forEach(v -> {
+                    if (timer > 0 && timer < v.getId() * 10) {
+                        drawPane.getChildren().add(new Circle(v.getCurrentPos().getX(), v.getCurrentPos().getY(), 1, v.getCircle().getFill()));
+                    }
+                    if (timer == maxTimer) {
+                        timer = 0L;
+                    }
+                });
+
+                drawPane.getChildren().add(new Circle(mainVehicle.getCurrentPos().getX(), mainVehicle.getCurrentPos().getY(), 0.5, mainVehicle.getCircle().getFill()));
             });
         }
     }
+
 
     private Pos getUnitVector(Pos from, Pos to) {
         final Pos pos = new Pos();
@@ -190,7 +323,7 @@ public class MainApplication extends Application {
                 part = hugeCloud.size();
             }
             List<Pos> cloud = hugeCloud.subList(0, part);
-            if (isMainVehicleStopped(cloud, GPS_MEASUREMENT_ERROR*2)) {
+            if (isMainVehicleStopped(cloud, GPS_MEASUREMENT_ERROR * 2)) {
                 return;
             }
             float angle = getLineProperties(cloud);
@@ -330,7 +463,7 @@ public class MainApplication extends Application {
     }
 
     private boolean isMainVehicleStopped(List<Pos> cloud, float measurementError) {
-        if (!isEmpty(cloud) && cloud.size() >1) {
+        if (!isEmpty(cloud) && cloud.size() > 1) {
             final Comparator<Pos> compX = (p1, p2) -> Float.compare(p1.getX(), p2.getX());
             final Comparator<Pos> compY = (p1, p2) -> Float.compare(p1.getY(), p2.getY());
             float maxBordersX = cloud.stream().max(compX).get().getX();
@@ -354,16 +487,24 @@ public class MainApplication extends Application {
         System.out.println("Creating excel");
 
         Row heading = sheet.createRow(rowNum++);
-        String[] head = {"main X","main Y","vehicle 1 X","vehicle 1 Y","vehicle 2 X","vehicle 2 Y","vehicle 3 X","vehicle 3 Y"};
+        List<String> headers = new ArrayList<>();
+        vehicles.forEach(vehicle -> {
+            headers.add("Vehicle " + vehicle.getId() + " X");
+            headers.add("Vehicle " + vehicle.getId() + " Y");
+        });
         int headColNum = 0;
-        for (String s : head) {
+        for (String s : headers) {
             Cell cell = heading.createCell(headColNum++);
             cell.setCellValue(s);
         }
 
-        createListRecord(sheet,
-                newArrayList(mainVehicle.getList(),vehicle1.getApproximateList(),
-                        vehicle2.getApproximateList(), vehicle3.getApproximateList()));
+        final List<List<Pos>> listOfLists = new ArrayList<>();
+        listOfLists.add(mainVehicle.getList());
+        for (int i = 1; i< vehicles.size();i++) {
+            listOfLists.add(vehicles.get(i).getApproximateList());
+        }
+
+        createListRecord(sheet, listOfLists);
 
         try {
             FileOutputStream outputStream = new FileOutputStream(FILE_NAME);
@@ -388,7 +529,7 @@ public class MainApplication extends Application {
                 maxLength = l.size();
             }
         }
-        for (int i = 1;i<=maxLength;i++) {
+        for (int i = 1; i <= maxLength; i++) {
             sheet.createRow(i);
         }
         for (List<Pos> data : list) {
@@ -399,8 +540,8 @@ public class MainApplication extends Application {
                 Cell cell2 = row.createCell(secondColNum);
                 cell2.setCellValue(pos.getY());
             }
-            firstColNum+=2;
-            secondColNum+=2;
+            firstColNum += 2;
+            secondColNum += 2;
             rowNum = 1;
         }
     }
@@ -418,20 +559,25 @@ public class MainApplication extends Application {
         final Group group = new Group();
 
         final HBox hBox = new HBox();
-        hBox.setMinHeight(800);
-        hBox.setMaxHeight(800);
+        hBox.setMinHeight(900);
+        hBox.setMaxHeight(900);
         final Pane controlPane = new Pane();
-        drawPane.setMinHeight(800);
-        drawPane.setMaxHeight(800);
+        drawPane.setMinSize(1300, 900);
+        drawPane.setMaxSize(1300, 900);
+        controlPane.setMaxSize(300, 900);
+        controlPane.setMinSize(300, 900);
         Separator hugeSeparator = new Separator();
         hugeSeparator.setOrientation(Orientation.VERTICAL);
-        hBox.getChildren().addAll(controlPane, hugeSeparator, drawPane);
+        hBox.getChildren().addAll(drawPane, hugeSeparator, controlPane);
 
         final VBox vBox = new VBox();
         final Label inputNumberOfVehiclesText = new Label("Введите количество машин");
         nField.setMaxWidth(50);
         valueX.setMaxWidth(50);
         valueY.setMaxWidth(50);
+        final Label gpsErrorText = new Label("Введите погрешность GPS");
+        final Label numberOfPointsText = new Label("Введите количество точек");
+        final Label algorithmErrorText = new Label("Введите погрешность алгоритма");
 
         final ToggleGroup toggleGroup = new ToggleGroup();
         follow.setToggleGroup(toggleGroup);
@@ -459,18 +605,44 @@ public class MainApplication extends Application {
             }
         });
 
-        vBox.getChildren().addAll(inputNumberOfVehiclesText, nField, follow, repeat, targetTable, addTargetText, targetHBox, separator, space, MAIN_RUN_BUTTON, excel);
+        vBox.getChildren().addAll(inputNumberOfVehiclesText, nField, gpsErrorText, gpsErrorField, numberOfPointsText, numberOfPointsField , algorithmErrorText, algorithmErrorField,
+                follow, repeat, turnOffAlgorithm, targetTable, addTargetText, targetHBox, separator, space, MAIN_RUN_BUTTON, excel);
         controlPane.getChildren().add(vBox);
         group.getChildren().add(hBox);
 
-        final Scene scene = new Scene(group, 1600, 800);
+        final Scene scene = new Scene(group, 1600, 900);
 
         stage.setScene(scene);
         stage.show();
     }
 
     private void shutDownAllExecutors(List<ScheduledExecutorService> executors) {
-        executors.forEach(executor -> executor.shutdownNow());
+        if (!isEmpty(executors)) {
+            executors.forEach(executor -> executor.shutdownNow());
+        }
+    }
+
+    private Pos convergenceTwoWays(final Vehicle vehicle, final Vehicle previousVehicle, final Pos nextPoint) {
+        final Pos currentPos = vehicle.getCurrentPos();
+        final Pos previousVehicleCurrentPos = previousVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR);
+        if (nextPoint != null && currentPos != null && previousVehicleCurrentPos != null) {
+            float firstDist = getDistance(currentPos, previousVehicleCurrentPos);
+            float secondDist = getDistance(currentPos, nextPoint);
+            System.out.println("First dist: " + firstDist + " Second dist: " + secondDist);
+            if (firstDist > secondDist || firstDist > GPS_MEASUREMENT_ERROR + 5) {
+                return nextPoint;
+            }
+        }
+        return null;
+    }
+
+    private float getDistance(final Pos first, final Pos second) {
+        final float delX = first.getX() - second.getX();
+        final float delY = first.getY() - second.getY();
+        if (Math.abs(delX) > 0.05 || Math.abs(delY) > 0.05) {
+            return (float) Math.sqrt(delX * delX + delY * delY);
+        } else
+            return 0;
     }
 
     private void createTargetTable(TableView table) {

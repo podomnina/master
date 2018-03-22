@@ -195,13 +195,13 @@ public class Main extends Application {
             public void run() {
                 System.out.println("Get coordinates of main vehicle");
                 if (isEmpty(vehicle1.getTargetList()) || !mainVehicle.getCurrentPos().equals(vehicle1.getTargetList().element())) {
-                    vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError());
+                    vehicle1.getTargetList().add(mainVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle2.getTargetList()) || !vehicle1.getCurrentPos().equals(vehicle2.getTargetList().element())) {
-                    vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError());
+                    vehicle2.getTargetList().add(vehicle1.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
                 if (isEmpty(vehicle3.getTargetList()) || !vehicle2.getCurrentPos().equals(vehicle3.getTargetList().element())) {
-                    vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError());
+                    vehicle3.getTargetList().add(vehicle2.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
                 }
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
