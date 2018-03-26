@@ -88,7 +88,7 @@ public class MainApplication extends Application {
     public void start(Stage stage) {
         initGUI(stage);
         final float xPos = 100;
-        final float yPos = 50;
+        final float yPos = 100;
         mainVehicle = createVehicle(0L, new Pos(xPos, yPos), Color.RED, drawPane);
         vehicles.add(mainVehicle);
 
@@ -124,6 +124,17 @@ public class MainApplication extends Application {
                     mainVehicle.getList().add(mainVehicle.getCurrentPos());
                     mainVehicle.getList().addAll(mainVehicleQueue);
                 }
+                Queue queue = new LinkedList();
+                queue.add(new Pos(1000,100));
+                queue.add(new Pos(1100,300));
+                queue.add(new Pos(1000,500));
+                queue.add(new Pos(200,500));
+                queue.add(new Pos(100,700));
+                queue.add(new Pos(200,800));
+                queue.add(new Pos(900,800));
+                mainVehicle.setTargetList(queue);
+                mainVehicle.getList().add(mainVehicle.getCurrentPos());
+                mainVehicle.getList().addAll(queue);
 
                 //Создание ведомых ТС
                 float currentYPos = yPos;
@@ -200,7 +211,7 @@ public class MainApplication extends Application {
                 vehicle.getTargetList().add(pos);
                 break;
             case 2:
-
+                vehicle.getList().add(pos);
                 break;
             case 3:
                 vehicle.getTargetList().add(pos);
@@ -219,6 +230,7 @@ public class MainApplication extends Application {
                 Pos etalonPos = mainVehicle.getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR);
                 if (!isEmpty(vehicles) && vehicles.size() > 1) {
                     vehicles.get(1).getTargetList().add(etalonPos);
+                    vehicles.get(1).getList().add(etalonPos);
                     if (vehicles.size() > 2) {
                         for (int i = 2; i < vehicles.size(); i++) {
                             getCoordinatesByMode(vehicles.get(i), vehicles.get(i - 1).getCurrentPosWithMeasurementError(GPS_MEASUREMENT_ERROR));
@@ -504,8 +516,14 @@ public class MainApplication extends Application {
 
         final List<List<Pos>> listOfLists = new ArrayList<>();
         listOfLists.add(mainVehicle.getList());
-        for (int i = 1; i< vehicles.size();i++) {
-            listOfLists.add(vehicles.get(i).getApproximateList());
+        if (mode == 1 || mode == 2) {
+            for (int i = 1; i < vehicles.size(); i++) {
+                listOfLists.add(vehicles.get(i).getApproximateList());
+            }
+        } else if (mode == 3 ) {
+            for (int i = 1; i < vehicles.size(); i++) {
+                listOfLists.add(vehicles.get(i).getList());
+            }
         }
 
         createListRecord(sheet, listOfLists);
