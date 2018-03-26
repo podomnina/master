@@ -6,8 +6,12 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Orientation;
+import javafx.geometry.Side;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.chart.LineChart;
+import javafx.scene.chart.NumberAxis;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.input.MouseEvent;
@@ -564,11 +568,28 @@ public class MainApplication extends Application {
         final Pane controlPane = new Pane();
         drawPane.setMinSize(1300, 900);
         drawPane.setMaxSize(1300, 900);
+        drawPane.setLayoutX(150);
+        drawPane.setLayoutY(100);
         controlPane.setMaxSize(300, 900);
         controlPane.setMinSize(300, 900);
         Separator hugeSeparator = new Separator();
         hugeSeparator.setOrientation(Orientation.VERTICAL);
         hBox.getChildren().addAll(drawPane, hugeSeparator, controlPane);
+
+        final NumberAxis xAxis = new NumberAxis(0,1300,100);
+        xAxis.setSide(Side.TOP);
+        final NumberAxis yAxis = new NumberAxis(0,900,100);
+
+        //creating the chart
+        final LineChart<Number,Number> lineChart =
+                new LineChart<Number,Number>(xAxis,yAxis);
+
+
+
+        lineChart.setMinSize(1300, 900);
+        lineChart.setMaxSize(1300, 900);
+
+        drawPane.getChildren().add(lineChart);
 
         final VBox vBox = new VBox();
         final Label inputNumberOfVehiclesText = new Label("Введите количество машин");
