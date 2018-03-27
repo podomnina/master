@@ -68,9 +68,9 @@ public class MainApplication extends Application {
     private int n = 0;
     private int mode = 0; //0 - ничего, 1 - следование, 2 - повторение, 3 - без алгоритма
 
-    private static final long MAIN_VEHICLE_FREQUENCY = 500;
-    private static final long VEHICLE_FREQUENCY = 10;
-    private static final long GET_COORDINATES_FREQUENCY = 100;
+    private static final long MAIN_VEHICLE_FREQUENCY = 3000;
+    private static final long VEHICLE_FREQUENCY = 200;
+    private static final long GET_COORDINATES_FREQUENCY = 200;
 
     public static float GPS_MEASUREMENT_ERROR = 50;
     public static int NUMBER_OF_POINTS = 50;
