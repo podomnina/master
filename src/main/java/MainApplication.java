@@ -60,7 +60,7 @@ public class MainApplication extends Application {
     private Button MAIN_RUN_BUTTON = new Button("Запустить");
     private Button space = new Button();
     private final ObservableList<PosTable> data = FXCollections.observableArrayList();
-    private List<Color> colors = newArrayList(Color.RED, Color.ORANGE, Color.YELLOW, Color.GREEN, Color.AQUAMARINE, Color.BLUE, Color.VIOLET, Color.BLACK);
+    private List<Color> colors = newArrayList(Color.RED, Color.BLACK, Color.YELLOW, Color.GREEN, Color.AQUAMARINE, Color.BLUE, Color.VIOLET, Color.BLACK);
 
     private Vehicle mainVehicle;
     private List<Vehicle> vehicles = new ArrayList<>();
@@ -68,9 +68,9 @@ public class MainApplication extends Application {
     private int n = 0;
     private int mode = 0; //0 - ничего, 1 - следование, 2 - повторение, 3 - без алгоритма
 
-    private static final long MAIN_VEHICLE_FREQUENCY = 5000;
-    private static final long VEHICLE_FREQUENCY = 100;
-    private static final long GET_COORDINATES_FREQUENCY = 1000;
+    private static final long MAIN_VEHICLE_FREQUENCY = 500;
+    private static final long VEHICLE_FREQUENCY = 10;
+    private static final long GET_COORDINATES_FREQUENCY = 100;
 
     public static float GPS_MEASUREMENT_ERROR = 50;
     public static int NUMBER_OF_POINTS = 50;
@@ -78,7 +78,7 @@ public class MainApplication extends Application {
 
     private Long timer = 0L;
 
-    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
+    private static final String FILE_NAME = "C:\\Users\\podo0716\\sandbox\\master\\src\\main\\resources\\tmp\\data.xlsx";
 
     public static void main(String[] args) {
         launch(args);
@@ -237,6 +237,11 @@ public class MainApplication extends Application {
                         }
                     }
                 }
+                Platform.runLater(() -> {
+                    if (mode == 1 || mode == 2) {
+                        drawPane.getChildren().add(new Circle(etalonPos.getX(), etalonPos.getY(), 2, mainVehicle.getCircle().getFill()));
+                    }
+                });
             }
         }, 0, GET_COORDINATES_FREQUENCY, TimeUnit.MILLISECONDS);
         return getCoordinates;
