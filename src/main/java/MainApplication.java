@@ -20,6 +20,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
+import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 import model.Pos;
 import model.Vehicle;
@@ -60,7 +61,7 @@ public class MainApplication extends Application {
     private Button MAIN_RUN_BUTTON = new Button("Запустить");
     private Button space = new Button();
     private final ObservableList<PosTable> data = FXCollections.observableArrayList();
-    private List<Color> colors = newArrayList(Color.RED, Color.BLACK, Color.YELLOW, Color.GREEN, Color.AQUAMARINE, Color.BLUE, Color.VIOLET, Color.BLACK);
+    private List<Color> colors = newArrayList(Color.RED, Color.BLUE, Color.GREEN, Color.VIOLET, Color.AQUAMARINE, Color.ORANGE, Color.BROWN, Color.BLACK);
 
     private Vehicle mainVehicle;
     private List<Vehicle> vehicles = new ArrayList<>();
@@ -68,9 +69,9 @@ public class MainApplication extends Application {
     private int n = 0;
     private int mode = 0; //0 - ничего, 1 - следование, 2 - повторение, 3 - без алгоритма
 
-    private static final long MAIN_VEHICLE_FREQUENCY = 3000;
-    private static final long VEHICLE_FREQUENCY = 200;
-    private static final long GET_COORDINATES_FREQUENCY = 200;
+    private static final long MAIN_VEHICLE_FREQUENCY = 5000;
+    private static final long VEHICLE_FREQUENCY = 100;
+    private static final long GET_COORDINATES_FREQUENCY = 500;
 
     public static float GPS_MEASUREMENT_ERROR = 50;
     public static int NUMBER_OF_POINTS = 50;
@@ -78,7 +79,7 @@ public class MainApplication extends Application {
 
     private Long timer = 0L;
 
-    private static final String FILE_NAME = "C:\\Users\\podo0716\\sandbox\\master\\src\\main\\resources\\tmp\\data.xlsx";
+    private static final String FILE_NAME = "C:/Users/domni/IdeaProjects/master/src/main/resources/tmp/data.xlsx";
 
     public static void main(String[] args) {
         launch(args);
@@ -193,11 +194,26 @@ public class MainApplication extends Application {
                     }
                     moveVehicle(vehicle, 1, vehicle.getApproximateTargetList(), false, null);
                 } else {
-                    moveVehicle(vehicle, 1, null, true, vehicles.get(1));
+                    final Vehicle prevVehicle = vehicles.get(vehicle.getId().intValue()-1);
+                    if (((vehicle.getCurrentPos().getX() <= prevVehicle.getCurrentPos().getX() + GPS_MEASUREMENT_ERROR)
+                            && (vehicle.getCurrentPos().getX() >= prevVehicle.getCurrentPos().getX() - GPS_MEASUREMENT_ERROR))
+                            && ((vehicle.getCurrentPos().getY() <= prevVehicle.getCurrentPos().getY() + GPS_MEASUREMENT_ERROR)
+                            && (vehicle.getCurrentPos().getY() >= prevVehicle.getCurrentPos().getY() - GPS_MEASUREMENT_ERROR))) {
+                        System.out.println("");
+                    } else {
+                        moveVehicle(vehicle, 1, null, true, vehicles.get(1));
+                    }
                 }
                 break;
             case 3:
-                moveVehicle(vehicle, 1, null, false, null);
+                if (((vehicle.getCurrentPos().getX() <= mainVehicle.getCurrentPos().getX() + GPS_MEASUREMENT_ERROR)
+                        && (vehicle.getCurrentPos().getX() >= mainVehicle.getCurrentPos().getX() - GPS_MEASUREMENT_ERROR))
+                        && ((vehicle.getCurrentPos().getY() <= mainVehicle.getCurrentPos().getY() + GPS_MEASUREMENT_ERROR)
+                        && (vehicle.getCurrentPos().getY() >= mainVehicle.getCurrentPos().getY() - GPS_MEASUREMENT_ERROR))) {
+                    System.out.println("");
+                } else {
+                    moveVehicle(vehicle, 1, null, false, null);
+                }
                 break;
             default:
                 break;
@@ -215,6 +231,7 @@ public class MainApplication extends Application {
                 break;
             case 3:
                 vehicle.getTargetList().add(pos);
+                vehicle.getList().add(pos);
                 break;
             default:
                 break;
@@ -345,6 +362,8 @@ public class MainApplication extends Application {
             }
             List<Pos> cloud = hugeCloud.subList(0, part);
             if (isMainVehicleStopped(cloud, GPS_MEASUREMENT_ERROR * 2)) {
+                //vehicle.getTargetList().removeAll(cloud);
+                //vehicle.getApproximateTargetList().add(getCentralPointInCloud(cloud));
                 return;
             }
             float angle = getLineProperties(cloud);
@@ -586,15 +605,15 @@ public class MainApplication extends Application {
         final Group group = new Group();
 
         final HBox hBox = new HBox();
-        hBox.setMinHeight(900);
-        hBox.setMaxHeight(900);
+        hBox.setMinHeight(1000);
+        hBox.setMaxHeight(1000);
         final Pane controlPane = new Pane();
-        drawPane.setMinSize(1300, 900);
-        drawPane.setMaxSize(1300, 900);
+        drawPane.setMinSize(1300, 1000);
+        drawPane.setMaxSize(1300, 1000);
         drawPane.setLayoutX(150);
         drawPane.setLayoutY(100);
-        controlPane.setMaxSize(300, 900);
-        controlPane.setMinSize(300, 900);
+        controlPane.setMaxSize(300, 1000);
+        controlPane.setMinSize(300, 1000);
         Separator hugeSeparator = new Separator();
         hugeSeparator.setOrientation(Orientation.VERTICAL);
         hBox.getChildren().addAll(drawPane, hugeSeparator, controlPane);
@@ -609,8 +628,8 @@ public class MainApplication extends Application {
 
 
 
-        lineChart.setMinSize(1300, 900);
-        lineChart.setMaxSize(1300, 900);
+        lineChart.setMinSize(1300, 1000);
+        lineChart.setMaxSize(1300, 1000);
 
         drawPane.getChildren().add(lineChart);
 
@@ -648,13 +667,74 @@ public class MainApplication extends Application {
                 valueY.clear();
             }
         });
+        Button stop = new Button("АСТАНАВИТЕСЬ");
 
-        vBox.getChildren().addAll(inputNumberOfVehiclesText, nField, gpsErrorText, gpsErrorField, numberOfPointsText, numberOfPointsField , algorithmErrorText, algorithmErrorField,
-                follow, repeat, turnOffAlgorithm, targetTable, addTargetText, targetHBox, separator, space, MAIN_RUN_BUTTON, excel);
+        vBox.getChildren().addAll(inputNumberOfVehiclesText, nField, gpsErrorText, gpsErrorField, numberOfPointsText, numberOfPointsField ,
+                follow, repeat, turnOffAlgorithm, targetTable, addTargetText, targetHBox, separator, space, MAIN_RUN_BUTTON, excel, stop);
         controlPane.getChildren().add(vBox);
         group.getChildren().add(hBox);
 
-        final Scene scene = new Scene(group, 1600, 900);
+        stop.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent event) {
+                shutDownAllExecutors(executors);
+                final ToggleGroup toggleGroup = new ToggleGroup();
+                if (!isEmpty(vehicles) && vehicles.size() > 1) {
+                    List<RadioButton> radioButtons = new ArrayList<>();
+                    for (int i = 1; i<vehicles.size(); i++) {
+                        RadioButton radioButton = new RadioButton(String.valueOf(i));
+                        radioButton.setToggleGroup(toggleGroup);
+                        radioButtons.add(radioButton);
+                        vBox.getChildren().add(radioButton);
+                    }
+                    Button choice = new Button("Показать путь");
+                    vBox.getChildren().add(choice);
+                    choice.setOnAction(new EventHandler<ActionEvent>() {
+                        @Override
+                        public void handle(ActionEvent event) {
+                            lineChart.toFront();
+                            radioButtons.forEach(radioButton -> {
+                                int num = Integer.valueOf(radioButton.getText());
+                                if (radioButton.isSelected()) {
+                                    Vehicle vehicle = vehicles.get(num);
+                                    List<Pos> list = new ArrayList<>();
+                                    if (mode == 1 || mode == 2) {
+                                        list = vehicle.getApproximateList();
+                                    } else if (mode == 3) {
+                                        list = vehicle.getList();
+                                    }
+                                    if (vehicle != null && list != null) {
+                                        Pos start1 = list.get(0);
+                                        for (int i = 1; i<list.size();i++) {
+                                            Pos end = list.get(i);
+                                            Line line = new Line(start1.getX(), start1.getY(), end.getX(), end.getY());
+                                            line.getStrokeDashArray().addAll(10d, 10d);
+                                            line.setStroke(vehicle.getCircle().getFill());
+                                            line.setStrokeWidth(3);
+                                            drawPane.getChildren().add(line);
+                                            start1 = end;
+                                        }
+
+                                        Pos start = mainVehicle.getList().get(0);
+                                        for (int i = 1; i<mainVehicle.getList().size();i++) {
+                                            Pos end = mainVehicle.getList().get(i);
+                                            Line line = new Line(start.getX(), start.getY(), end.getX(), end.getY());
+                                            line.setStroke(mainVehicle.getCircle().getFill());
+                                            line.setStrokeWidth(3);
+                                            drawPane.getChildren().add(line);
+                                            start = end;
+
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        });
+
+        final Scene scene = new Scene(group, 1600, 1000);
 
         stage.setScene(scene);
         stage.show();
